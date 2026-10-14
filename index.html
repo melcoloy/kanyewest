@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ye — Discographie interactive</title>
+  <meta name="description" content="Discographie studio interactive de Kanye West / Ye : timeline, filtres, classements et détails par album." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="hero">
+    <p class="kicker">Discographie interactive</p>
+    <h1>KANYE WEST <span>/ YE</span></h1>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <nav class="timeline" aria-label="Frise chronologique">
+    <div class="timeline-track" id="timeline"></div>
+  </nav>
+
+  <section class="controls">
+    <input type="search" id="search" placeholder="Rechercher un album, un morceau, un invité…" aria-label="Rechercher" />
+    <div class="chips" role="group" aria-label="Type d'album">
+      <button class="chip active" data-type="all">Tous</button>
+      <button class="chip" data-type="solo">Solo</button>
+      <button class="chip" data-type="collab">Collaborations</button>
+    </div>
+    <select id="sort" aria-label="Trier">
+      <option value="date-asc">Plus ancien d'abord</option>
+      <option value="date-desc">Plus récent d'abord</option>
+      <option value="billboard">Meilleur classement</option>
+      <option value="pistes">Nombre de titres</option>
+    </select>
+  </section>
+
+  <main>
+    <p class="count" id="count"></p>
+    <div class="grid" id="grid"></div>
+
+    <section class="chart-section">
+      <h2>Longueur des albums</h2>
+      <p class="muted">Nombre de titres à la sortie. Au-dessus de chaque barre : meilleure place au Billboard 200.</p>
+      <div class="chart" id="chart"></div>
+    </section>
+  </main>
+
+  <dialog id="modal">
+    <button class="close" id="close" aria-label="Fermer">×</button>
+    <div id="modal-body"></div>
+    <div class="modal-nav">
+      <button id="prev">← Précédent</button>
+      <button id="next">Suivant →</button>
+    </div>
+  </dialog>
+
+  <footer>
+    Projet perso — données compilées à la main (Wikipedia, Billboard, Recording Academy, presse musicale).
+    Pochettes fournies par l'API iTunes Search d'Apple, © leurs labels respectifs.
+  </footer>
+
+  <script src="data/albums.js"></script>
+  <script src="data/tracklists.js"></script>
+  <script src="js/covers.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

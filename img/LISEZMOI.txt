@@ -1,0 +1,1 @@
+Mets ici tes images de pochettes (ex. bully.jpg), puis ajoute cover: "img/bully.jpg" à l'album dans data/albums.js.
