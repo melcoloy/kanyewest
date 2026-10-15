@@ -11,7 +11,7 @@
 window.ALBUMS = [
   {
     id: "college-dropout",
-    cover: "img/dropoutbear.jpeg",
+    //cover: "img/dropoutbear.jpeg",
     titre: "The College Dropout",
     date: "2004-02-10",
     type: "solo",
@@ -28,7 +28,7 @@ window.ALBUMS = [
   },
   {
     id: "late-registration",
-    cover: "img/latebear.jpeg",
+    //cover: "img/latebear.jpeg",
     titre: "Late Registration",
     date: "2005-08-30",
     type: "solo",
@@ -45,7 +45,7 @@ window.ALBUMS = [
   },
   {
     id: "graduation",
-    cover: "img/Graduationbear.jpeg",
+    //cover: "img/Graduationbear.jpeg",
     titre: "Graduation",
     date: "2007-09-11",
     type: "solo",
@@ -62,7 +62,7 @@ window.ALBUMS = [
   },
   {
     id: "808s",
-    cover: "img/808bear.jpeg",
+    //cover: "img/808bear.jpeg",
     titre: "808s & Heartbreak",
     date: "2008-11-24",
     type: "solo",
@@ -81,7 +81,7 @@ window.ALBUMS = [
     id: "mbdtf",
     //cover: "img/original_mbdtf.jpg",
     //cover: "img/mbdtf_girl.jpg",
-    cover: "img/mbdtfbear.jpeg",
+    //cover: "img/mbdtfbear.jpeg",
     titre: "My Beautiful Dark Twisted Fantasy",
     date: "2010-11-22",
     type: "solo",
@@ -115,7 +115,7 @@ window.ALBUMS = [
   },
   {
     id: "yeezus",
-    cover: "img/yeezusbear.jpeg",
+    //cover: "img/yeezusbear.jpeg",
     titre: "Yeezus",
     appleId: 1440873068,
     date: "2013-06-18",
@@ -133,7 +133,7 @@ window.ALBUMS = [
   },
   {
     id: "tlop",
-    cover: "img/pablobear.jpeg",
+    //cover: "img/pablobear.jpeg",
     titre: "The Life of Pablo",
     date: "2016-02-14",
     type: "solo",
@@ -270,7 +270,7 @@ window.ALBUMS = [
   },
   {
     id: "bully",
-    cover: "img/bullybear.jpeg",
+    //cover: "img/bullybear.jpeg",
     appleId: 1872771948,
     titre: "Bully",
     date: "2026-03-28",
