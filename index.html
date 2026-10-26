@@ -11,8 +11,9 @@
 </head>
 <body>
   <header class="hero">
-    <p class="kicker">Discographie interactive</p>
+    <p class="kicker">Discographie</p>
     <h1>KANYE WEST <span>/ YE</span></h1>
+    <nav class="hero-nav"><a href="#stats-title">Stats</a><a href="#jeu">Jeu « Plus ou moins »</a></nav>
     <div class="stats" id="stats"></div>
   </header>
 
@@ -32,6 +33,7 @@
       <option value="date-desc">Plus récent d'abord</option>
       <option value="billboard">Meilleur classement</option>
       <option value="pistes">Nombre de titres</option>
+      <option value="streams">Les plus écoutés</option>
     </select>
   </section>
 
@@ -39,10 +41,40 @@
     <p class="count" id="count"></p>
     <div class="grid" id="grid"></div>
 
-    <section class="chart-section">
-      <h2>Longueur des albums</h2>
-      <p class="muted">Nombre de titres à la sortie. Au-dessus de chaque barre : meilleure place au Billboard 200.</p>
-      <div class="chart" id="chart"></div>
+    <section class="stats-section" aria-labelledby="stats-title">
+      <h2 id="stats-title">Stats</h2>
+      <p class="muted section-sub">Ventes et certifications : États-Unis. Streams : Spotify, monde. Clique sur un album pour ouvrir sa fiche.</p>
+
+      <div class="panel">
+        <h3>Spotify</h3>
+        <p class="muted panel-sub">Relevé du <span id="sp-date"></span> (kworb.net). Ces chiffres sont mondiaux et évoluent chaque jour.</p>
+        <div class="sp-total" id="sp-total"></div>
+        <ol class="sp-songs" id="sp-songs"></ol>
+      </div>
+
+      <div class="panel">
+        <h3>Ventes de la 1re semaine</h3>
+        <p class="muted panel-sub">Unités Billboard la semaine de sortie. Jusqu'en 2014, seules les ventes d'albums comptent ; depuis, le streaming est inclus (barres hachurées).</p>
+        <div class="fw-chart" id="fw-chart"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Tous les albums</h3>
+        <p class="muted panel-sub">Clique sur un en-tête pour trier. Streams Spotify : édition standard de chaque album.<span class="mobile-only"> Fais glisser le tableau pour voir toutes les colonnes →</span></p>
+        <div class="table-wrap"><table class="stats-table" id="stats-table"></table></div>
+      </div>
+
+      <div class="panel">
+        <h3>Singles dans le top 10 du Hot 100</h3>
+        <p class="muted panel-sub">En tant qu'artiste principal, avec leur certification RIAA.</p>
+        <ol class="singles" id="singles"></ol>
+      </div>
+    </section>
+
+    <section class="game-section" id="jeu" aria-labelledby="jeu-title">
+      <h2 id="jeu-title">Plus ou moins</h2>
+      <p class="muted section-sub">Le deuxième morceau a-t-il plus ou moins de streams Spotify que le premier ? Enchaîne les bonnes réponses.</p>
+      <div class="game" id="game"></div>
     </section>
   </main>
 
@@ -56,13 +88,16 @@
   </dialog>
 
   <footer>
-    Projet perso — données compilées à la main (Wikipedia, Billboard, Recording Academy, presse musicale).
+    Projet perso — données compilées à la main (Wikipedia, Billboard, RIAA, kworb.net, Recording Academy, presse musicale).
     Pochettes fournies par l'API iTunes Search d'Apple, © leurs labels respectifs.
   </footer>
 
   <script src="data/albums.js"></script>
   <script src="data/tracklists.js"></script>
+  <script src="data/stats.js"></script>
+  <script src="data/track-streams.js"></script>
   <script src="js/covers.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/game.js"></script>
 </body>
 </html>

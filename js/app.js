@@ -43,6 +43,17 @@ const fmtDuree = (sec) => {
   return h ? `${h} h ${String(m).padStart(2, "0")} min` : `${m} min ${String(s).padStart(2, "0")} s`;
 };
 
+// Streams Spotify par morceau : { titre, streams } du morceau le plus écouté d'un album
+const TS = window.TRACK_STREAMS || {};
+const trackStreams = (id, titre) => TS[id]?.[titre] ?? null;
+const topTrack = (id) => {
+  const m = TS[id];
+  if (!m) return null;
+  const [titre, streams] = Object.entries(m).sort((x, y) => y[1] - x[1])[0] || [];
+  return titre ? { titre, streams } : null;
+};
+const albumStreams = (id) => (window.STATS?.albums?.[id]?.spotify ?? -1);
+
 const peak = (a) => (a.billboard ? `n° ${a.billboard}` : "Non classé");
 
 // ---------- Statistiques ----------
@@ -50,14 +61,13 @@ function renderStats() {
   const solos = albums.filter((a) => a.type === "solo").length;
   const numberOnes = albums.filter((a) => a.billboard === 1).length;
   const grammys = albums.filter((a) => a.grammyAlbum).length;
-  const span = `${year(albums[0].date)}–${year(albums.at(-1).date)}`;
 
   $("#stats").innerHTML = [
     [albums.length, "albums studio"],
     [solos, "albums solo"],
     [numberOnes, "n° 1 au Billboard 200"],
-    [grammys, "Grammys d'album"],
-    [span, "de carrière"],
+    [grammys, "Grammys du meilleur album"],
+    [`${year(albums[0].date)}\u00a0–\u00a0auj.`, "carrière de rappeur"],
   ]
     .map(([v, l]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`)
     .join("");
@@ -102,6 +112,7 @@ const sorters = {
   "date-desc": (a, b) => b.date.localeCompare(a.date),
   billboard: (a, b) => (a.billboard ?? 999) - (b.billboard ?? 999) || a.date.localeCompare(b.date),
   pistes: (a, b) => (b.pistes ?? -1) - (a.pistes ?? -1),
+  streams: (a, b) => albumStreams(b.id) - albumStreams(a.id),
 };
 
 // ---------- Grille ----------
@@ -124,7 +135,13 @@ function renderGrid() {
         </div>
         <div class="card-body">
           <p class="album-title">${escapeHtml(a.titre)}</p>
-          <p class="card-meta">${a.avec ? "avec " + escapeHtml(a.avec) + " · " : ""}${peak(a)}</p>
+          <p class="card-meta">${a.avec ? "avec " + escapeHtml(a.avec) + " · " : ""}${peak(a)}${
+            albumStreams(a.id) > 0 ? ` · ${fmtStreams(albumStreams(a.id))} streams` : ""
+          }</p>
+          ${(() => {
+            const t = topTrack(a.id);
+            return t ? `<p class="card-top" title="Morceau le plus écouté sur Spotify">▶ ${escapeHtml(t.titre)} <span>${fmtStreams(t.streams)}</span></p>` : "";
+          })()}
         </div>
       </button>`
       )
@@ -136,19 +153,144 @@ function renderGrid() {
   document.querySelectorAll(".tl-dot").forEach((d) => d.classList.toggle("dim", !ids.has(d.dataset.id)));
 }
 
-// ---------- Graphique ----------
-function renderChart() {
-  const max = Math.max(...albums.map((a) => a.pistes ?? 0));
-  $("#chart").innerHTML = albums
-    .map((a) => {
-      const h = a.pistes ? (a.pistes / max) * 100 : 6;
+// ---------- Section Stats ----------
+const S = window.STATS || { albums: {}, singles: [] };
+const fmtNb = (n) => n.toLocaleString("fr-BE");
+const fmtK = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1).replace(".", ",")} M` : `${Math.round(n / 1000)} k`);
+// "6× Platine" → 6, "Platine" → 1, "Or" → 0.5, "Diamant" → 10, aucune → 0 (pour trier)
+const certVal = (c) => (!c ? 0 : /diamant/i.test(c) ? 10 : /or$/i.test(c) ? 0.5 : parseFloat(c) || 1);
+const certBadge = (c) =>
+  c ? `<span class="cert ${/^or$/i.test(c) ? "gold" : "plat"}">${escapeHtml(c)}</span>` : `<span class="muted">—</span>`;
+
+const statsState = { key: "date", dir: 1 };
+
+function renderStatsSection() {
+  renderSpotify();
+  renderFirstWeek();
+  renderStatsTable();
+  renderSingles();
+}
+
+// "9 702 556 720" → "9,70 Md" ; "708 890 822" → "709 M"
+const fmtStreams = (n) =>
+  n >= 1e9 ? `${(n / 1e9).toFixed(2).replace(".", ",")} Md` : `${Math.round(n / 1e6)} M`;
+
+// Spotify : total + top morceaux
+function renderSpotify() {
+  const sp = S.spotify;
+  if (!sp) return;
+  const date = fmtDate(sp.date);
+  $("#sp-date").textContent = date;
+  $("#sp-total").innerHTML = `
+    <b>${(sp.total / 1e9).toFixed(1).replace(".", ",")} milliards</b>
+    <span>de streams sur Spotify, tous morceaux confondus (y compris en invité)</span>`;
+  const max = sp.morceaux[0].streams;
+  $("#sp-songs").innerHTML = sp.morceaux
+    .map((m, i) => {
+      const alb = m.album && albums.find((a) => a.id === m.album);
+      const meta = m.invite
+        ? `invité sur un titre de ${escapeHtml(m.avec)}`
+        : (m.avec ? "avec " + escapeHtml(m.avec) + " · " : "") + (alb ? escapeHtml(alb.titre) : "hors album");
       return `
-      <div class="bar-wrap" data-id="${a.id}" title="${escapeHtml(a.titre)} — ${a.pistes ?? "?"} titres">
-        <span class="bar-label">${a.billboard ? "#" + a.billboard : "–"}</span>
-        <div class="bar" style="height:${h}%; background:${gradient(a.palette)}"></div>
-        <span class="bar-name">${initials(a.titre)}</span>
-      </div>`;
+      <li ${alb ? `data-id="${alb.id}" tabindex="0" class="clickable"` : ""}>
+        <span class="sp-rank">${i + 1}</span>
+        <span class="sp-main">
+          <span class="sp-title">${escapeHtml(m.titre)}${m.invite ? ' <span class="tag">invité</span>' : ""}</span>
+          <span class="sp-meta">${meta}</span>
+          <span class="sp-bar" style="width:${(m.streams / max) * 100}%"></span>
+        </span>
+        <span class="sp-val">${fmtStreams(m.streams)}</span>
+      </li>`;
     })
+    .join("");
+}
+
+// Ventes de la 1re semaine : barres horizontales, ordre chronologique
+function renderFirstWeek() {
+  const rows = albums.filter((a) => S.albums[a.id]?.premiereSemaine);
+  const max = Math.max(...rows.map((a) => S.albums[a.id].premiereSemaine));
+  const record = rows.reduce((b, a) => (S.albums[a.id].premiereSemaine > S.albums[b.id].premiereSemaine ? a : b));
+
+  $("#fw-chart").innerHTML = rows
+    .map((a) => {
+      const v = S.albums[a.id].premiereSemaine;
+      const streaming = +year(a.date) >= 2015;
+      return `
+      <button class="fw-row" data-id="${a.id}" aria-label="${escapeHtml(a.titre)} : ${fmtNb(v)} unités">
+        <span class="fw-name">${escapeHtml(a.titre)} <span class="fw-year">${year(a.date)}</span></span>
+        <span class="fw-track">
+          <span class="fw-bar${streaming ? " streaming" : ""}${a.id === record.id ? " record" : ""}" style="width:${(v / max) * 100}%"></span>
+          <span class="fw-val">${fmtK(v)}</span>
+        </span>
+        <span class="tip">${escapeHtml(a.titre)} · ${fmtNb(v)} unités${streaming ? " (streaming compris)" : " (ventes)"}</span>
+      </button>`;
+    })
+    .join("");
+}
+
+// Tableau triable
+function renderStatsTable() {
+  const get = {
+    titre: (a) => a.titre.toLowerCase(),
+    date: (a) => a.date,
+    billboard: (a) => a.billboard ?? 999,
+    fw: (a) => S.albums[a.id]?.premiereSemaine ?? -1,
+    riaa: (a) => certVal(S.albums[a.id]?.riaa),
+    spotify: (a) => S.albums[a.id]?.spotify ?? -1,
+  };
+  const { key, dir } = statsState;
+  const rows = [...albums].sort((a, b) => {
+    const x = get[key](a), y = get[key](b);
+    return (x < y ? -1 : x > y ? 1 : 0) * dir || a.date.localeCompare(b.date);
+  });
+
+  const cols = [
+    ["titre", "Album"],
+    ["date", "Année"],
+    ["billboard", "Billboard 200"],
+    ["fw", "1re semaine"],
+    ["riaa", "Certification RIAA"],
+    ["spotify", "Streams Spotify"],
+  ];
+  $("#stats-table").innerHTML = `
+    <thead><tr>${cols
+      .map(
+        ([k, l]) => `<th aria-sort="${k === key ? (dir > 0 ? "ascending" : "descending") : "none"}">
+          <button data-sort="${k}">${l}<span class="arrow">${k === key ? (dir > 0 ? "↑" : "↓") : ""}</span></button></th>`
+      )
+      .join("")}</tr></thead>
+    <tbody>${rows
+      .map((a) => {
+        const st = S.albums[a.id] || {};
+        return `<tr data-id="${a.id}" tabindex="0">
+          <td class="t-album">${covers[a.id] ? `<img src="${covers[a.id].img}" alt="">` : `<span class="t-dot" style="background:${gradient(a.palette)}"></span>`}${escapeHtml(a.titre)}</td>
+          <td class="num">${year(a.date)}</td>
+          <td class="num">${a.billboard ? "n° " + a.billboard : "—"}</td>
+          <td class="num">${st.premiereSemaine ? fmtNb(st.premiereSemaine) : "—"}</td>
+          <td>${certBadge(st.riaa)}</td>
+          <td class="num">${st.spotify ? fmtStreams(st.spotify) : "—"}</td>
+        </tr>`;
+      })
+      .join("")}</tbody>`;
+}
+
+// Singles du top 10
+function renderSingles() {
+  $("#singles").innerHTML = [...S.singles]
+    .sort((a, b) => a.hot100 - b.hot100 || a.annee - b.annee)
+    .map(
+      (s) => `
+      <li ${s.album ? `data-id="${s.album}" tabindex="0" class="clickable"` : ""}>
+        <span class="peak${s.hot100 === 1 ? " one" : ""}">#${s.hot100}</span>
+        <span class="s-main">
+          <span class="s-title">${escapeHtml(s.titre)}</span>
+          <span class="s-meta">${s.avec ? "feat. " + escapeHtml(s.avec) + " · " : ""}${s.annee}${
+            s.album ? " · " + escapeHtml(albums.find((a) => a.id === s.album)?.titre || "") : " · hors album"
+          }</span>
+        </span>
+        ${certBadge(s.riaa)}
+      </li>`
+    )
     .join("");
 }
 
@@ -225,6 +367,9 @@ function renderTracklist(a) {
   const total = secs.every((x) => !isNaN(x)) ? ` · ${fmtDuree(secs.reduce((s, x) => s + x, 0))}` : "";
   const nbFeats = new Set(t.flatMap((x) => x.feats)).size;
   const note = (window.TRACKLIST_NOTES || {})[a.id];
+  const st = t.map((x) => trackStreams(a.id, x.titre));
+  const maxSt = Math.max(0, ...st.filter(Boolean));
+  const hasSt = maxSt > 0;
 
   return `
     <h3>Tracklist <span class="h3-meta">${t.length} titres${total}${nbFeats ? ` · ${nbFeats} invités` : ""}</span></h3>
@@ -240,12 +385,19 @@ function renderTracklist(a) {
                   .map((f) => `<button class="feat" data-feat="${escapeHtml(f)}">${escapeHtml(f)}</button>`)
                   .join(", ")}</span>`
               : ""
+          }${
+            hasSt && st[i]
+              ? `<span class="tr-streams"><span class="tr-strack"><span class="tr-sbar" style="width:${(st[i] / maxSt) * 100}%"></span></span>${fmtStreams(st[i])}${
+                  st[i] === maxSt ? ' <span class="tag top">le plus écouté</span>' : ""
+                }</span>`
+              : ""
           }</span>
           <span class="tr-dur">${x.duree || ""}</span>
         </li>`
         )
         .join("")}
     </ol>
+    ${hasSt ? `<p class="tr-note">Streams Spotify au ${fmtDate((window.STATS?.spotify?.date) || "2026-10-24")} (kworb.net).</p>` : ""}
     ${note ? `<p class="tr-note">ⓘ ${escapeHtml(note)}</p>` : ""}`;
 }
 
@@ -289,7 +441,14 @@ function bindEvents() {
 
   // Un seul écouteur pour la grille, la frise et le graphique
   document.addEventListener("click", (e) => {
-    const el = e.target.closest(".card, .tl-dot, .bar-wrap");
+    const sortBtn = e.target.closest("[data-sort]");
+    if (sortBtn) {
+      const k = sortBtn.dataset.sort;
+      statsState.dir = statsState.key === k ? -statsState.dir : (k === "titre" || k === "date" || k === "billboard" ? 1 : -1);
+      statsState.key = k;
+      return renderStatsTable();
+    }
+    const el = e.target.closest(".card, .tl-dot, .fw-row, #stats-table tr[data-id], #singles li[data-id], #sp-songs li[data-id]");
     if (el) openAlbum(el.dataset.id);
   });
 
@@ -306,6 +465,8 @@ function bindEvents() {
   $("#modal").addEventListener("close", renderGrid);
 
   document.addEventListener("keydown", (e) => {
+    const row = e.target.closest?.("#stats-table tr[data-id], #singles li[data-id], #sp-songs li[data-id]");
+    if (row && e.key === "Enter") return openAlbum(row.dataset.id);
     if (!$("#modal").open) return;
     if (e.key === "ArrowLeft") step(-1);
     if (e.key === "ArrowRight") step(1);
@@ -316,7 +477,7 @@ function bindEvents() {
 renderStats();
 renderTimeline();
 renderGrid();
-renderChart();
+renderStatsSection();
 bindEvents();
 
 if (window.Covers) {
@@ -331,5 +492,8 @@ if (window.Covers) {
       card.prepend(img);
     }
     if ($("#modal").open && visible[current]?.id === id) renderModal();
+    clearTimeout(window.__tblTimer);
+    window.__tblTimer = setTimeout(renderStatsTable, 300);
+    document.dispatchEvent(new CustomEvent("cover-loaded", { detail: id }));
   });
 }
