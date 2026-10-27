@@ -4,7 +4,19 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ye — Discographie interactive</title>
-  <meta name="description" content="Discographie studio interactive de Kanye West / Ye : timeline, samples, classement, défi du jour, blind test et jeux." />
+  <meta name="description" content="Discographie studio interactive de Kanye West / Ye : timeline, comparateur, samples, invités, classements, défi du jour et jeux." />
+  <!-- Aperçu quand le lien est partagé (WhatsApp, Discord, Messenger…). L'image doit avoir une adresse complète :
+       si l'adresse du site change, mets à jour og:url et og:image. -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Ye — Discographie interactive" />
+  <meta property="og:title" content="Kanye West / Ye — Discographie interactive" />
+  <meta property="og:description" content="Albums, stats, samples, invités, classements, défi du jour et blind test." />
+  <meta property="og:url" content="https://melcoloy.github.io/kanyewest/" />
+  <meta property="og:image" content="https://melcoloy.github.io/kanyewest/icons/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="fr_BE" />
+  <meta name="twitter:card" content="summary_large_image" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
@@ -25,11 +37,12 @@
   <nav class="tabs" role="tablist" aria-label="Sections du site">
     <div class="tabs-inner">
       <button class="tab" role="tab" id="tab-disco" aria-controls="panel-disco" data-tab="disco">Discographie</button>
+      <button class="tab" role="tab" id="tab-comparer" aria-controls="panel-comparer" data-tab="comparer">Comparer</button>
       <button class="tab" role="tab" id="tab-samples" aria-controls="panel-samples" data-tab="samples">Samples</button>
+      <button class="tab" role="tab" id="tab-invites" aria-controls="panel-invites" data-tab="invites">Invités</button>
       <button class="tab" role="tab" id="tab-classement" aria-controls="panel-classement" data-tab="classement">Mon classement</button>
       <button class="tab" role="tab" id="tab-defi" aria-controls="panel-defi" data-tab="defi">Défi du jour</button>
-      <button class="tab" role="tab" id="tab-blind-test" aria-controls="panel-blind-test" data-tab="blind-test">Blind test</button>
-      <button class="tab" role="tab" id="tab-plus-ou-moins" aria-controls="panel-plus-ou-moins" data-tab="plus-ou-moins">Plus ou moins</button>
+      <button class="tab" role="tab" id="tab-jeux" aria-controls="panel-jeux" data-tab="jeux">Jeux</button>
     </div>
   </nav>
 
@@ -76,6 +89,12 @@
       </div>
 
       <div class="panel">
+        <h3>Évolution des streams</h3>
+        <p class="muted panel-sub">Total Spotify de la carrière, relevé chaque lundi (mise à jour automatique).</p>
+        <div id="sp-history"></div>
+      </div>
+
+      <div class="panel">
         <h3>Ventes de la 1re semaine</h3>
         <p class="muted panel-sub">Unités Billboard la semaine de sortie. Jusqu'en 2014, seules les ventes d'albums comptent ; depuis, le streaming est inclus (barres hachurées).</p>
         <div class="fw-chart" id="fw-chart"></div>
@@ -97,6 +116,15 @@
   </main>
   </div>
 
+  <!-- ===== Onglet Comparer ===== -->
+  <main class="tab-panel" id="panel-comparer" role="tabpanel" aria-labelledby="tab-comparer" hidden>
+    <section class="game-section" aria-labelledby="cmp-title">
+      <h2 id="cmp-title">Comparer deux albums</h2>
+      <p class="muted section-sub">Choisis deux albums : le meilleur chiffre de chaque ligne est mis en valeur.</p>
+      <div id="comparer"></div>
+    </section>
+  </main>
+
   <!-- ===== Onglet Samples ===== -->
   <main class="tab-panel" id="panel-samples" role="tabpanel" aria-labelledby="tab-samples" hidden>
     <section class="game-section" aria-labelledby="sm-title">
@@ -104,6 +132,15 @@
       <p class="muted section-sub">Les morceaux qu'il a samplés, de la soul accélérée de ses débuts à King Crimson et Aphex Twin. Écoute l'original et la version de Ye côte à côte.</p>
       <div id="samples"></div>
       <p class="tr-note">Sélection d'après Wikipedia (« List of Kanye West samples »), pas une liste exhaustive. Extraits : API iTunes ; certains originaux n'y sont pas.</p>
+    </section>
+  </main>
+
+  <!-- ===== Onglet Invités ===== -->
+  <main class="tab-panel" id="panel-invites" role="tabpanel" aria-labelledby="tab-invites" hidden>
+    <section class="game-section" aria-labelledby="gv-title">
+      <h2 id="gv-title">Les invités</h2>
+      <p class="muted section-sub">Tous les artistes crédités en featuring sur ses albums studio. Plus un artiste est proche du centre, plus il apparaît souvent ; un trait relie deux invités présents sur le même morceau. Clique sur un nom pour voir les morceaux.</p>
+      <div id="invites"></div>
     </section>
   </main>
 
@@ -125,21 +162,37 @@
     </section>
   </main>
 
-  <!-- ===== Onglet Plus ou moins ===== -->
-  <main class="tab-panel" id="panel-plus-ou-moins" role="tabpanel" aria-labelledby="tab-plus-ou-moins" hidden>
-    <section class="game-section" aria-labelledby="jeu-title">
+  <!-- ===== Onglet Jeux ===== -->
+  <main class="tab-panel" id="panel-jeux" role="tabpanel" aria-labelledby="tab-jeux" hidden>
+    <nav class="subtabs" aria-label="Choisir un jeu">
+      <button class="subtab" data-sub="blind-test"><b>Blind test</b><span>Trouve le morceau à l'oreille</span></button>
+      <button class="subtab" data-sub="pochette"><b>Pochette floue</b><span>Devine l'album pixelisé</span></button>
+      <button class="subtab" data-sub="annee"><b>Devine l'année</b><span>Place le morceau sur la frise</span></button>
+      <button class="subtab" data-sub="plus-ou-moins"><b>Plus ou moins</b><span>Lequel a le plus de streams ?</span></button>
+    </nav>
+
+    <section class="game-section game-pane" data-pane="blind-test" aria-labelledby="bt-title" hidden>
+      <h2 id="bt-title">Blind test</h2>
+      <p class="muted section-sub">Écoute quelques secondes d'un morceau et retrouve-le. Plus l'extrait est court quand tu réponds, plus tu marques de points. Seul, contre la montre ou à deux.</p>
+      <div class="bt" id="blindtest"></div>
+    </section>
+
+    <section class="game-section game-pane" data-pane="pochette" aria-labelledby="px-title" hidden>
+      <h2 id="px-title">Pochette floue</h2>
+      <p class="muted section-sub">La pochette est pixelisée : trouve l'album avant qu'elle soit nette. Moins il y a de pixels quand tu réponds, plus tu marques.</p>
+      <div class="bt" id="pixel"></div>
+    </section>
+
+    <section class="game-section game-pane" data-pane="annee" aria-labelledby="an-title" hidden>
+      <h2 id="an-title">Devine l'année</h2>
+      <p class="muted section-sub">Un morceau, une frise : en quelle année est-il sorti ? 5 points pour l'année exacte, 3 à un an près, 1 à deux ans près.</p>
+      <div class="bt" id="annee"></div>
+    </section>
+
+    <section class="game-section game-pane" data-pane="plus-ou-moins" aria-labelledby="jeu-title" hidden>
       <h2 id="jeu-title">Plus ou moins</h2>
       <p class="muted section-sub">Le deuxième morceau a-t-il plus ou moins de streams Spotify que le premier ? Enchaîne les bonnes réponses.</p>
       <div class="game" id="game"></div>
-    </section>
-  </main>
-
-  <!-- ===== Onglet Blind test ===== -->
-  <main class="tab-panel" id="panel-blind-test" role="tabpanel" aria-labelledby="tab-blind-test" hidden>
-    <section class="game-section" aria-labelledby="bt-title">
-      <h2 id="bt-title">Blind test</h2>
-      <p class="muted section-sub">Écoute quelques secondes d'un morceau et retrouve-le. Plus l'extrait est court quand tu réponds, plus tu marques de points.</p>
-      <div class="bt" id="blindtest"></div>
     </section>
   </main>
 
@@ -162,11 +215,16 @@
   <script src="data/stats.js"></script>
   <script src="data/track-streams.js"></script>
   <script src="data/samples.js"></script>
+  <script src="data/history.js"></script>
   <script src="js/covers.js"></script>
   <script src="js/app.js"></script>
   <script src="js/previews.js"></script>
   <script src="js/game.js"></script>
+  <script src="js/player.js"></script>
   <script src="js/blindtest.js"></script>
+  <script src="js/jeux.js"></script>
+  <script src="js/comparer.js"></script>
+  <script src="js/invites.js"></script>
   <script src="js/samples.js"></script>
   <script src="js/tierlist.js"></script>
   <script src="js/theme.js"></script>

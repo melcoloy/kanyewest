@@ -3,7 +3,8 @@
 // allonge l'extrait (5 s, 10 s, 20 s) mais rapporte moins de points (4 → 3 → 2 → 1).
 //
 // Deux jeux utilisent ce moteur :
-//   - Blind test (#blindtest) : 10 manches, mode « morceau » ou « album », classiques ou tout.
+//   - Blind test (#blindtest) : mode « morceau » ou « album », classiques ou tout, et trois formats :
+//       10 manches en solo, contre la montre (60 s) ou en duel à deux (buzzers A et L).
 //   - Défi du jour (#defi)    : 5 morceaux tirés au sort à partir de la date, donc les mêmes
 //     pour tout le monde ; une seule partie par jour, série de jours, résultat à partager.
 // Extraits : js/previews.js. S'appuie sur app.js (albums, covers, tracks, TS, gradient,
@@ -76,10 +77,17 @@
     const MANCHES = daily ? 5 : 10;
     const BEST_KEY = "ye-blindtest-best";
     const DEFI_KEY = "ye-defi";
-    let settings = daily ? { mode: "titre", sel: "classiques" } : { mode: "titre", sel: "classiques" };
-    let game = null; // { list, i, score, history, round, next, rng }
+    const CHRONO = 60; // secondes
+    let settings = { mode: "titre", sel: "classiques", format: "solo" };
+    let game = null; // { list, i, score, history, round, next, scores (duel), deadline (chrono) }
     const best = daily ? {} : store.get(BEST_KEY, {});
-    const bestKey = () => `${settings.mode}-${settings.sel}`;
+    const bestKey = () => `${settings.mode}-${settings.sel}${settings.format === "chrono" ? "-chrono" : ""}`;
+    const fmt = () => (daily ? "solo" : settings.format);
+    const total = () => (daily ? MANCHES : fmt() === "chrono" ? Infinity : 10); // nombre de manches
+    const duel = () => fmt() === "duel";
+    const chrono = () => fmt() === "chrono";
+    const PLAYERS = ["Joueur 1", "Joueur 2"];
+    const BUZZ_KEYS = ["a", "l"];
     const selection = () => (settings.sel === "classiques" ? classiques : pool);
 
     // ---- Lecteur
@@ -120,13 +128,17 @@
       offsetFrac = round.offsetFrac;
       audio.src = round.url;
     }
+    const claim = () => document.dispatchEvent(new CustomEvent("ye-audio", { detail: "bt" }));
+    document.addEventListener("ye-audio", (e) => { if (e.detail !== "bt") stop(); });
     function playSnippet() {
+      claim();
       limit = LEVELS[game.round.level];
       if (audio.readyState >= 1) audio.currentTime = offset;
       audio.play().catch(() => syncPlayBtn());
     }
     function playRest() { // après la réponse : la suite de l'aperçu
       limit = Infinity;
+      claim();
       if (audio.paused) audio.play().catch(() => {});
     }
     function syncPlayBtn() {
@@ -261,9 +273,23 @@
               ${opt("sel", "tout", "Toute la discographie", `${pool.length} titres, deep cuts compris`)}
             </div>
           </div>
+          <div class="bt-group">
+            <p class="bt-label">Partie</p>
+            <div class="bt-opts bt-opts-3">
+              ${opt("format", "solo", "10 manches", "Seul, 40 points max")}
+              ${opt("format", "chrono", "Contre la montre", `${CHRONO} s pour marquer un max de points`)}
+              ${opt("format", "duel", "Duel à deux", "Même écran : buzzers A et L")}
+            </div>
+          </div>
           <div class="bt-rules">
             ${stepsHtml()}
-            <p class="muted">${MANCHES} manches · ${MANCHES * 4} points max · Record dans ce mode : <b>${best[bestKey()] ?? "—"}</b></p>
+            <p class="muted">${
+              duel()
+                ? "10 manches. Le premier qui buzze (touche <b>A</b> ou <b>L</b>, ou son bouton) répond ; s'il se trompe, l'autre tente sa chance."
+                : chrono()
+                  ? `${CHRONO} secondes, autant de morceaux que possible · Record : <b>${best[bestKey()] ?? "—"}</b>`
+                  : `10 manches · 40 points max · Record dans ce mode : <b>${best[bestKey()] ?? "—"}</b>`
+            }</p>
           </div>
           <button class="g-btn bt-start" data-act="start">Lancer la partie</button>
           <p class="bt-msg muted" role="status"></p>
@@ -318,7 +344,7 @@
       owner = api;
       audio.src = SILENCE;
       audio.play().catch(() => {});
-      game = { list: buildList(), i: 0, score: 0, history: [], round: null, next: null, day: dateKey() };
+      game = { list: buildList(), i: 0, score: 0, history: [], round: null, next: null, day: dateKey(), scores: [0, 0], deadline: 0 };
       const msg = root.querySelector(".bt-msg");
       root.querySelector(".bt-start").disabled = true;
       msg.textContent = "Chargement des extraits…";
@@ -337,16 +363,51 @@
     function showRound(round, autoplay) {
       game.round = round;
       game.i++;
-      game.next = game.i < MANCHES ? prepare(game) : Promise.resolve(null); // manche suivante préparée pendant qu'on joue
+      game.next = game.i < total() ? prepare(game) : Promise.resolve(null); // manche suivante préparée pendant qu'on joue
+      round.buzz = null; // duel : joueur qui a la main
+      round.tried = [];
+      round.wrong = [];
+      if (chrono() && !game.deadline) startClock();
       load(round);
       renderRound();
       if (autoplay) playSnippet();
     }
 
+    // Contre la montre : compte à rebours affiché dans le score, fin de partie à 0
+    let clock = 0;
+    function startClock() {
+      game.deadline = Date.now() + CHRONO * 1000;
+      const g = game;
+      clearInterval(clock);
+      clock = setInterval(() => {
+        if (game !== g || g.over) return clearInterval(clock);
+        const left = Math.max(0, Math.ceil((g.deadline - Date.now()) / 1000));
+        const el = root.querySelector("#bt-timer");
+        if (el) {
+          el.textContent = `${left} s`;
+          el.classList.toggle("urgent", left <= 10);
+        }
+        if (left <= 0) {
+          clearInterval(clock);
+          renderEnd();
+        }
+      }, 250);
+    }
+    const timeLeft = () => Math.max(0, Math.ceil((game.deadline - Date.now()) / 1000));
+
+    function buzz(p) {
+      const r = game?.round;
+      if (!r || r.answered || r.buzz !== null || r.tried.includes(p)) return;
+      r.buzz = p;
+      audio.pause();
+      renderRound();
+    }
+
     function choiceHtml(c, i) {
       const r = game.round;
-      const state = !r.answered ? "" : c.ok ? " ok" : c.key === r.picked ? " ko" : " off";
-      const dis = r.answered ? " disabled" : "";
+      const wrong = r.wrong.includes(c.key);
+      const state = !r.answered ? (wrong ? " ko" : "") : c.ok ? " ok" : c.key === r.picked || wrong ? " ko" : " off";
+      const dis = r.answered || wrong || (duel() && r.buzz === null) ? " disabled" : "";
       if (settings.mode === "album") {
         const a = c.album;
         const img = covers[a.id]?.img;
@@ -370,20 +431,36 @@
         ? `<div class="bt-reveal ${r.gained ? "ok" : "ko"}">
             <span class="bt-rcov" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img src="${covers[a.id].img}" alt="">` : ""}</span>
             <div>
-              <p class="bt-verdict">${r.gained ? `Bien joué ! +${r.gained} pt${r.gained > 1 ? "s" : ""}` : r.picked ? "Raté" : "Passé"}</p>
+              <p class="bt-verdict">${
+                duel()
+                  ? r.winner != null ? `${PLAYERS[r.winner]} trouve ! +${r.gained} pt${r.gained > 1 ? "s" : ""}` : "Personne n'a trouvé"
+                  : r.gained ? `Bien joué ! +${r.gained} pt${r.gained > 1 ? "s" : ""}` : r.picked ? "Raté" : "Passé"
+              }</p>
               <p class="bt-rtitle">${escapeHtml(r.t.titre)}</p>
               <p class="muted">${escapeHtml(a.titre)} · ${a.date.slice(0, 4)}${r.t.streams ? ` · ${fmtStreams(r.t.streams)} streams` : ""}</p>
               <button class="bt-link" data-album="${a.id}">Voir l'album</button>
             </div>
           </div>`
         : "";
-      const last = game.i >= MANCHES;
+      const last = game.i >= total();
+      const scoreLine = duel()
+        ? `<span>Manche <b>${game.i}</b>/${total()}</span>${PLAYERS.map((n, p) => `<span class="bt-pscore p${p + 1}">${n} <b>${game.scores[p]}</b></span>`).join("")}`
+        : chrono()
+          ? `<span class="bt-timer-wrap">⏱ <b id="bt-timer">${timeLeft()} s</b></span><span>Morceau <b>${game.i}</b></span><span>Score <b>${game.score}</b></span><span>Record <b>${best[bestKey()] ?? 0}</b></span>`
+          : `<span>Manche <b>${game.i}</b>/${total()}</span><span>Score <b>${game.score}</b></span>${
+              daily ? `<span class="dj-live">${game.history.map((h) => (h.gained ? EMOJI[h.level] : "⬛")).join("")}</span>` : `<span>Record <b>${best[bestKey()] ?? 0}</b></span>`
+            }`;
+      // Duel : boutons buzzer tant que personne n'a la main
+      const buzzers =
+        duel() && !r.answered
+          ? r.buzz === null
+            ? `<div class="bt-buzzers">${PLAYERS.map(
+                (n, p) => `<button class="bt-buzz p${p + 1}" data-buzz="${p}"${r.tried.includes(p) ? " disabled" : ""}><b>${n}</b><span>touche ${BUZZ_KEYS[p].toUpperCase()}</span></button>`
+              ).join("")}</div>`
+            : `<p class="bt-turn p${r.buzz + 1}">${r.tried.length ? "Raté ! " : ""}<b>${PLAYERS[r.buzz]}</b>, à toi de répondre (touches 1 à 4)</p>`
+          : "";
       root.innerHTML = `
-        <div class="g-score">
-          <span>Manche <b>${game.i}</b>/${MANCHES}</span>
-          <span>Score <b>${game.score}</b></span>
-          ${daily ? `<span class="dj-live">${game.history.map((h) => (h.gained ? EMOJI[h.level] : "⬛")).join("")}</span>` : `<span>Record <b>${best[bestKey()] ?? 0}</b></span>`}
-        </div>
+        <div class="g-score">${scoreLine}</div>
         <div class="bt-player">
           <button class="bt-play" data-act="play" aria-label="Écouter l'extrait">▶</button>
           <div class="bt-track">
@@ -394,7 +471,7 @@
             <div class="bt-under">
               <span>${r.answered ? "Écoute la suite de l'extrait" : `Extrait : <b>${lvl} s</b> · une bonne réponse vaut <b>${pts} pt${pts > 1 ? "s" : ""}</b>`}</span>
               ${
-                r.answered
+                r.answered || (duel() && r.buzz !== null)
                   ? ""
                   : r.level < LEVELS.length - 1
                     ? `<button class="bt-link" data-act="more">Rallonger (${LEVELS[r.level + 1]} s)</button>`
@@ -404,40 +481,65 @@
           </div>
         </div>
         <p class="bt-msg muted" role="status"></p>
+        ${buzzers}
         <div class="bt-choices${settings.mode === "album" ? " albums" : ""}">${r.choices.map(choiceHtml).join("")}</div>
         ${reveal}
         <div class="bt-actions">
-          ${r.answered ? `<button class="g-btn" data-act="next">${last ? "Voir le résultat" : "Manche suivante →"}</button>` : ""}
+          ${r.answered && !chrono() ? `<button class="g-btn" data-act="next">${last ? "Voir le résultat" : "Manche suivante →"}</button>` : ""}
           <button class="bt-link" data-act="quit">${daily ? "Abandonner" : "Quitter la partie"}</button>
         </div>`;
       syncPlayBtn();
-      if (r.answered) root.querySelector('[data-act="next"]').focus();
+      if (r.answered && !chrono()) root.querySelector('[data-act="next"]').focus();
     }
 
     function answer(key) {
       const r = game.round;
-      if (r.answered) return;
+      if (r.answered || game.over) return;
+      const ok = key != null && r.choices.find((c) => c.key === key)?.ok;
+      if (duel() && key != null) {
+        if (r.buzz === null || r.wrong.includes(key)) return; // il faut d'abord buzzer
+        if (!ok) {
+          // Mauvaise réponse : l'autre joueur prend la main (s'il n'a pas déjà essayé)
+          r.wrong.push(key);
+          r.tried.push(r.buzz);
+          const other = 1 - r.buzz;
+          if (!r.tried.includes(other)) {
+            r.buzz = other;
+            return renderRound();
+          }
+        } else {
+          r.winner = r.buzz;
+        }
+      }
       r.answered = true;
       r.picked = key;
-      const ok = key != null && r.choices.find((c) => c.key === key)?.ok;
       r.gained = ok ? 4 - r.level : 0;
+      if (duel() && ok) game.scores[r.winner] += r.gained;
       game.score += r.gained;
-      game.history.push({ t: r.t, gained: r.gained, level: r.level, picked: key });
+      game.history.push({ t: r.t, gained: r.gained, level: r.level, picked: key, who: r.winner ?? null });
       renderRound();
+      if (chrono()) {
+        // Contre la montre : manche suivante automatiquement
+        const g = game, round = r;
+        setTimeout(() => { if (game === g && g.round === round && !g.over) next(); }, ok ? 700 : 1300);
+        return;
+      }
       playRest();
     }
 
     async function next() {
-      if (game.i >= MANCHES) return renderEnd();
+      if (game.i >= total()) return renderEnd();
       const g = game;
       stop();
       const btn = root.querySelector('[data-act="next"]');
-      btn.disabled = true;
-      btn.textContent = "Chargement…";
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Chargement…";
+      }
       // La manche est en général déjà prête (préchargée) et le lecteur a été débloqué au
       // lancement : la lecture démarre aussitôt.
       const round = await g.next;
-      if (game !== g) return;
+      if (game !== g || g.over) return;
       if (!round) return renderEnd();
       showRound(round, true);
     }
@@ -449,7 +551,7 @@
           return `<li data-album="${a.id}" tabindex="0">
             <span class="bt-rcov sm" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img src="${covers[a.id].img}" alt="">` : ""}</span>
             <span class="bt-rmain"><b>${escapeHtml(h.titre)}</b><span class="muted">${escapeHtml(a.titre)}</span></span>
-            <span class="bt-pts ${h.gained ? "ok" : "ko"}">${h.gained ? `${daily ? EMOJI[h.level] + " " : ""}+${h.gained} · ${LEVELS[h.level]} s` : h.picked ? "✗" : "passé"}</span>
+            <span class="bt-pts ${h.gained ? "ok" : "ko"}">${h.who != null ? `<span class="bt-who p${h.who + 1}">J${h.who + 1}</span> ` : ""}${h.gained ? `${daily ? EMOJI[h.level] + " " : ""}+${h.gained} · ${LEVELS[h.level]} s` : h.picked ? "✗" : "passé"}</span>
           </li>`;
         })
         .join("")}</ol>`;
@@ -457,7 +559,10 @@
 
     function renderEnd() {
       stop();
-      const manches = game.history.map((h) => ({ titre: h.t.titre, albumId: h.t.albumId, gained: h.gained, level: h.level, picked: h.picked ?? null }));
+      if (!game || game.over) return;
+      game.over = true;
+      clearInterval(clock);
+      const manches = game.history.map((h) => ({ titre: h.t.titre, albumId: h.t.albumId, gained: h.gained, level: h.level, picked: h.picked ?? null, who: h.who ?? null }));
       if (daily) {
         // Abandon : les manches non jouées comptent comme ratées
         while (manches.length < MANCHES && game.list.length) {
@@ -470,6 +575,21 @@
         game = null;
         return renderDailyIntro();
       }
+      if (duel()) {
+        const [a, b] = game.scores;
+        root.innerHTML = `
+          <div class="bt-end">
+            <p class="g-over-title">${a === b ? "Égalité !" : `${PLAYERS[a > b ? 0 : 1]} gagne !`}</p>
+            <p class="bt-final bt-duel-final"><b class="p1">${a}</b> – <b class="p2">${b}</b></p>
+            <p class="muted">${PLAYERS[0]} ${a} pts · ${PLAYERS[1]} ${b} pts</p>
+            ${recapHtml(manches)}
+            <div class="bt-actions">
+              <button class="g-btn" data-act="start">Revanche</button>
+              <button class="bt-link" data-act="setup">Changer de mode</button>
+            </div>
+          </div>`;
+        return root.querySelector('[data-act="start"]').focus();
+      }
       const key = bestKey();
       const record = game.score > (best[key] ?? -1);
       if (record) {
@@ -479,7 +599,7 @@
       root.innerHTML = `
         <div class="bt-end">
           <p class="g-over-title">${record && game.score > 0 ? "Nouveau record !" : "Partie terminée"}</p>
-          <p class="bt-final"><b>${game.score}</b> / ${manches.length * 4} pts</p>
+          <p class="bt-final"><b>${game.score}</b> ${chrono() ? `pts en ${CHRONO} s` : `/ ${manches.length * 4} pts`}</p>
           <p class="muted">${manches.filter((h) => h.gained).length} bonne(s) réponse(s) sur ${manches.length} · Record : ${best[key]}</p>
           ${recapHtml(manches)}
           <div class="bt-actions">
@@ -497,6 +617,8 @@
         settings[set.dataset.set] = set.dataset.val;
         return renderSetup();
       }
+      const bz = e.target.closest("[data-buzz]");
+      if (bz) return buzz(+bz.dataset.buzz);
       const pick = e.target.closest("[data-pick]");
       if (pick) return answer(pick.dataset.pick);
       const alb = e.target.closest("[data-album]");
@@ -510,7 +632,10 @@
       }
       if (act === "share") return share(shareText(dateKey(), defi().jours[dateKey()]), btn);
       if (act === "setup") return renderSetup();
-      if (act === "quit") return daily && game ? renderEnd() : renderSetup();
+      if (act === "quit") {
+        clearInterval(clock);
+        return daily && game ? renderEnd() : renderSetup();
+      }
       if (act === "next") return next();
       if (act === "skip") return answer(null);
       if (act === "more") {
@@ -526,12 +651,14 @@
     });
 
     const api = {
-      tab: daily ? "defi" : "blind-test",
-      // Clavier : 1-4 pour répondre, Espace pour écouter
+      tab: daily ? "defi" : "jeux/blind-test",
+      // Clavier : 1-4 pour répondre, Espace pour écouter, A / L pour buzzer en duel
       key(e) {
         if (e.key === "Enter" && e.target.closest?.("[data-album]")) return openAlbum(e.target.closest("[data-album]").dataset.album);
         const r = game?.round;
         if (!r || !root.querySelector(".bt-player")) return;
+        const bk = BUZZ_KEYS.indexOf(e.key.toLowerCase());
+        if (duel() && bk >= 0) return buzz(bk);
         if (/^[1-4]$/.test(e.key) && !r.answered) {
           const c = r.choices[+e.key - 1];
           if (c) answer(c.key);
@@ -554,7 +681,7 @@
 
   document.addEventListener("keydown", (e) => {
     if (document.getElementById("modal").open || e.target.closest?.("input, select, textarea")) return;
-    games.find((g) => g.tab === window.currentTab?.())?.key(e);
+    games.find((g) => g.tab === window.currentView?.())?.key(e);
   });
   // On coupe le son quand on change d'onglet ; on rafraîchit le défi (la date a pu changer)
   document.addEventListener("tab-change", (e) => {

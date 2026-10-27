@@ -3,7 +3,9 @@
 // Glisser-déposer les pochettes / titres (souris ou doigt).
 // Sans glisser : clique / tape une pochette puis un rang, ou au clavier : sélectionne une
 // pochette (Entrée) puis appuie sur S, A, B, C, D (ou 0 pour la remettre « à classer »).
-// Le classement est gardé dans le navigateur et peut être exporté en image PNG.
+// Le classement est gardé dans le navigateur, peut être exporté en image PNG ou partagé par
+// un lien (#classement/…) : la personne qui l'ouvre le voit au-dessus de son propre classement.
+// « Mon top global » rassemble les morceaux classés S et A dans tous les albums.
 // S'appuie sur app.js (albums, covers, gradient, escapeHtml, initials).
 
 (() => {
@@ -25,12 +27,12 @@
   // Ce qu'on classe : "albums", ou l'id d'un album pour classer ses morceaux
   let scope = "albums";
   try { scope = localStorage.getItem(SCOPE_KEY) || "albums"; } catch {}
-  if (scope !== "albums" && !byId[scope]) scope = "albums";
+  if (scope !== "albums" && scope !== "top" && !byId[scope]) scope = "albums";
   const isAlbums = () => scope === "albums";
   const KEY = () => (isAlbums() ? "ye-classement" : `ye-classement-${scope}`);
   // Éléments à classer : ids d'albums, ou titres des morceaux (sans les skits)
   const itemsOf = (sc) =>
-    sc === "albums" ? albums.map((a) => a.id) : (tracks[sc] || []).map((t) => t.titre).filter((t) => !/\(skit/i.test(t));
+    sc === "albums" ? albums.map((a) => a.id) : sc === "top" ? [] : (tracks[sc] || []).map((t) => t.titre).filter((t) => !/\(skit/i.test(t));
   let ids = itemsOf(scope);
   const sel = (id) => `.tl-tile[data-id="${CSS.escape(id)}"]`;
 
@@ -60,6 +62,113 @@
   }
   let selected = null;
 
+  // ---- Partage par lien : « albums:S0.3.4-A1-B-C-D » (numéro de chaque élément, en base 36)
+  let shared = null; // { scope, state } du classement reçu par lien
+  function encode() {
+    const body = TIERS.map((t) => t.id + state[t.id].map((id) => ids.indexOf(id).toString(36)).join(".")).join("-");
+    return `${scope}:${body}`;
+  }
+  function decode(str) {
+    const m = /^([\w-]+):(.*)$/.exec(str || "");
+    if (!m || (m[1] !== "albums" && !byId[m[1]])) return null;
+    const list = itemsOf(m[1]);
+    const st = { pool: [] };
+    const placed = new Set();
+    for (const part of m[2].split("-")) {
+      const tier = TIERS.find((t) => t.id === part[0]);
+      if (!tier) continue;
+      st[tier.id] = part.slice(1).split(".").filter(Boolean).map((x) => list[parseInt(x, 36)]).filter((id) => id && !placed.has(id) && placed.add(id));
+    }
+    for (const t of TIERS) st[t.id] ||= [];
+    st.pool = list.filter((id) => !placed.has(id));
+    return { scope: m[1], state: st };
+  }
+  function openShared(sub) {
+    const d = sub ? decode(sub) : null;
+    if (!d) return;
+    shared = d;
+    if (scope !== d.scope) {
+      scope = d.scope; // on affiche son propre classement du même album juste en dessous, pour comparer
+      state = load();
+    }
+    render();
+  }
+  async function shareLink(btn) {
+    const url = `${location.origin}${location.pathname}#classement/${encodeURIComponent(encode())}`;
+    const title = isAlbums() ? "Mon classement des albums de Ye" : `Mon classement de ${byId[scope].titre}`;
+    if (navigator.share && matchMedia("(pointer: coarse)").matches) {
+      try { return await navigator.share({ title, url }); } catch (e) { if (e.name === "AbortError") return; }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      btn.textContent = "Lien copié !";
+      setTimeout(() => (btn.textContent = "Partager le lien"), 2000);
+    } catch {
+      prompt("Copie ce lien :", url);
+    }
+  }
+
+  // ---- Mon top global : morceaux classés S et A dans tous les albums
+  function renderTop() {
+    const rows = TIERS.slice(0, 2).map((t) => ({
+      t,
+      items: trackAlbums.flatMap((a) => {
+        try {
+          const st = JSON.parse(localStorage.getItem(`ye-classement-${a.id}`)) || {};
+          return (st[t.id] || []).map((titre) => ({ titre, a }));
+        } catch { return []; }
+      }),
+    }));
+    const any = rows.some((r) => r.items.length);
+    return `
+      <p class="muted tl-top-sub">Les morceaux que tu as classés <b>S</b> et <b>A</b> dans les classements par album, dans l'ordre de sortie. Clique sur un titre pour ouvrir l'album.</p>
+      ${
+        any
+          ? `<div class="tl-board">${rows
+              .map(
+                ({ t, items }) => `<div class="tl-row">
+              <div class="tl-label" style="background:${t.color}">${t.id}</div>
+              <div class="tl-szone">${
+                items
+                  .map(
+                    ({ titre, a }) => `<button class="tl-tile tl-chip tl-ro" data-album="${a.id}" title="${escapeHtml(a.titre)}">
+                      <span class="tl-mini" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img src="${covers[a.id].img}" alt="">` : ""}</span>${escapeHtml(titre)}</button>`
+                  )
+                  .join("") || `<span class="muted tl-done">Rien pour l'instant</span>`
+              }</div>
+            </div>`
+              )
+              .join("")}</div>
+            <p class="muted tl-top-count">${rows[0].items.length} morceau${rows[0].items.length > 1 ? "x" : ""} en S, ${rows[1].items.length} en A, sur ${trackAlbums.filter((a) => progress(a.id)).length} album(s) classé(s).</p>`
+          : `<div class="pl-empty"><p><b>Ton top est encore vide.</b></p><p class="muted">Choisis un album dans le menu et classe ses morceaux : ceux que tu mets en S et en A apparaîtront ici.</p></div>`
+      }`;
+  }
+
+  // Classement reçu par lien, en lecture seule
+  function renderShared() {
+    const what = shared.scope === "albums" ? "des albums" : `de ${escapeHtml(byId[shared.scope].titre)}`;
+    const tileRo = (id) => tile(id).replace('class="tl-tile', 'class="tl-tile tl-ro').replace(" selected", "");
+    return `
+      <div class="tl-shared">
+        <div class="tl-shared-head">
+          <p><span class="tag">Lien partagé</span> <b>Classement ${what} reçu</b></p>
+          <div class="tl-btns">
+            <button class="bt-link" data-act="import">Le copier dans mon classement</button>
+            <button class="bt-link" data-act="close-shared">Fermer</button>
+          </div>
+        </div>
+        <div class="tl-board">
+          ${TIERS.map(
+            (t) => `<div class="tl-row">
+              <div class="tl-label" style="background:${t.color}">${t.id}</div>
+              <div class="tl-szone">${shared.state[t.id].map(tileRo).join("")}</div>
+            </div>`
+          ).join("")}
+        </div>
+        <p class="bt-label tl-mine-label">Ton classement, pour comparer</p>
+      </div>`;
+  }
+
   // ---- Rendu
   const tile = (id) => {
     if (!isAlbums()) {
@@ -84,6 +193,7 @@
         <label class="bt-label" for="tl-scope">Que veux-tu classer ?</label>
         <select id="tl-scope">
           <option value="albums"${isAlbums() ? " selected" : ""}>Les albums</option>
+          <option value="top"${scope === "top" ? " selected" : ""}>★ Mon top global (sons classés S et A)</option>
           <optgroup label="Les morceaux d'un album">
             ${trackAlbums
               .map((x) => {
@@ -95,10 +205,13 @@
         </select>
         ${a ? `<span class="tl-scope-cov" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img src="${covers[a.id].img}" alt="">` : ""}</span>` : ""}
       </div>
+      ${scope === "top" ? renderTop() : `
+      ${shared && shared.scope === scope ? renderShared() : ""}
       <div class="tl-bar">
         <p class="muted">${nbPlaced}/${ids.length} ${what} classés · Glisse les ${isAlbums() ? "pochettes" : "titres"}, ou clique sur ${isAlbums() ? "une pochette" : "un titre"} puis sur un rang.</p>
         <div class="tl-btns">
           <button class="g-btn" data-act="export"${nbPlaced ? "" : " disabled"}>Exporter en image</button>
+          <button class="bt-link" data-act="share"${nbPlaced ? "" : " disabled"}>Partager le lien</button>
           <button class="bt-link" data-act="reset">Tout remettre à zéro</button>
         </div>
       </div>
@@ -111,11 +224,12 @@
         ).join("")}
       </div>
       <p class="bt-label tl-pool-label">À classer</p>
-      <div class="tl-zone tl-pool" data-zone="pool" aria-label="À classer">${state.pool.map(tile).join("") || `<span class="muted tl-done">Tous les ${what} sont classés 🎉</span>`}</div>`;
+      <div class="tl-zone tl-pool" data-zone="pool" aria-label="À classer">${state.pool.map(tile).join("") || `<span class="muted tl-done">Tous les ${what} sont classés 🎉</span>`}</div>`}`;
     root.querySelector("#tl-scope").addEventListener("change", (e) => {
       scope = e.target.value;
       try { localStorage.setItem(SCOPE_KEY, scope); } catch {}
       selected = null;
+      shared = null;
       state = load();
       render();
     });
@@ -134,7 +248,7 @@
   let drag = null; // { id, el, ghost, startX, startY, active }
   root.addEventListener("pointerdown", (e) => {
     const el = e.target.closest(".tl-tile");
-    if (!el || e.button !== 0) return;
+    if (!el || el.classList.contains("tl-ro") || e.button !== 0) return;
     drag = { id: el.dataset.id, el, startX: e.clientX, startY: e.clientY, active: false };
   });
 
@@ -209,6 +323,19 @@
       return render();
     }
     if (act === "export") return exportPng(e.target.closest("[data-act]"));
+    if (act === "share") return shareLink(e.target.closest("[data-act]"));
+    if (act === "close-shared" || act === "import") {
+      if (act === "import") {
+        if (!confirm("Remplacer ton classement par celui-ci ?")) return;
+        state = JSON.parse(JSON.stringify(shared.state));
+        save();
+      }
+      shared = null;
+      history.replaceState(null, "", "#classement");
+      return render();
+    }
+    const ro = e.target.closest(".tl-ro");
+    if (ro) { if (ro.dataset.album) openAlbum(ro.dataset.album); return; }
     const t = e.target.closest(".tl-tile");
     if (t) {
       selected = selected === t.dataset.id ? null : t.dataset.id;
@@ -221,7 +348,7 @@
 
   root.addEventListener("keydown", (e) => {
     const t = e.target.closest(".tl-tile");
-    if (!t) return;
+    if (!t || t.classList.contains("tl-ro")) return;
     const k = e.key.toUpperCase();
     if (TIERS.some((x) => x.id === k)) { e.preventDefault(); move(t.dataset.id, k); }
     else if (k === "0" || k === "BACKSPACE" || k === "DELETE") { e.preventDefault(); move(t.dataset.id, "pool"); }
@@ -351,5 +478,12 @@
     clearTimeout(coverTimer);
     coverTimer = setTimeout(() => { if (!drag) render(); }, 200);
   });
+  // Lien partagé : #classement/albums:S0.3-A1… (à l'ouverture de la page ou plus tard)
+  document.addEventListener("tab-change", (e) => {
+    const [tab, sub] = [e.detail.split("/")[0], e.detail.split("/").slice(1).join("/")];
+    if (tab === "classement" && sub) openShared(decodeURIComponent(sub));
+  });
   render();
+  const v = window.currentView?.() || "";
+  if (v.startsWith("classement/")) openShared(decodeURIComponent(v.slice(11)));
 })();

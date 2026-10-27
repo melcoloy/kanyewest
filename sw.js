@@ -6,7 +6,7 @@
 // Après une modification du site, pas besoin de changer VERSION : le réseau passe en premier.
 // Change-la seulement si tu ajoutes / renommes des fichiers dans SHELL.
 
-const VERSION = "v2";
+const VERSION = "v3";
 const SHELL_CACHE = `ye-shell-${VERSION}`;
 const ASSET_CACHE = "ye-assets";
 const MAX_ASSETS = 120;
@@ -21,10 +21,15 @@ const SHELL = [
   "data/stats.js",
   "data/track-streams.js",
   "data/samples.js",
+  "data/history.js",
   "js/covers.js",
   "js/app.js",
   "js/previews.js",
+  "js/player.js",
   "js/game.js",
+  "js/jeux.js",
+  "js/comparer.js",
+  "js/invites.js",
   "js/blindtest.js",
   "js/samples.js",
   "js/tierlist.js",

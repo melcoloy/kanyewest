@@ -4,6 +4,7 @@
 Fichiers modifiés :
   data/track-streams.js  streams de chaque morceau
   data/stats.js          streams de chaque album, total de la carrière, top morceaux, date du relevé
+  data/history.js        une ligne de plus dans l'historique (courbes du site)
 
 Usage :
   python scripts/update_streams.py              # télécharge kworb et met à jour les fichiers
@@ -21,6 +22,7 @@ Aucune dépendance : bibliothèque standard Python 3.9+.
 from __future__ import annotations
 
 import argparse
+import json
 import datetime as dt
 import html
 import re
@@ -33,6 +35,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 TRACKS_JS = ROOT / "data" / "track-streams.js"
 STATS_JS = ROOT / "data" / "stats.js"
+HISTORY_JS = ROOT / "data" / "history.js"
 
 ARTIST_ID = "5K4W6rqBFWDnAN6FQUkS6x"  # Kanye West sur Spotify
 SONGS_URL = f"https://kworb.net/spotify/artist/{ARTIST_ID}_songs.html"
@@ -236,6 +239,23 @@ def fetch(url: str) -> str:
         return r.read().decode("utf-8", errors="replace")
 
 
+def update_history(text: str, stats_text: str, today: dt.date, report: list[str]) -> str:
+    """Ajoute (ou remplace, si on relance le même jour) la ligne du jour dans data/history.js,
+    à partir des chiffres déjà mis à jour de stats.js."""
+    albums = {}
+    for m in re.finditer(r'^\s*"?([\w-]+)"?\s*:\s*\{[^}\n]*?spotify:\s*(\d+)', stats_text, flags=re.M):
+        albums[m.group(1)] = int(m.group(2))
+    total = re.search(r"total:\s*(\d+)", stats_text)
+    nl = "\r\n" if "\r\n" in text else "\n"
+    line = f'  {{ date: "{today.isoformat()}", total: {total.group(1) if total else "null"}, albums: {json.dumps(albums, separators=(",", ":"))} }},'
+    lines = text.split(nl)
+    lines = [ln for ln in lines if f'date: "{today.isoformat()}"' not in ln]  # relance le même jour
+    end = max(i for i, ln in enumerate(lines) if ln.strip() == "];")
+    lines.insert(end, line)
+    report.append(f"history.js : relevé du {today.isoformat()} ajouté")
+    return nl.join(lines)
+
+
 # newline="" : on garde les fins de ligne du fichier telles quelles (CRLF sous Windows, LF sur GitHub)
 def read(path: Path) -> str:
     with open(path, encoding="utf-8", newline="") as f:
@@ -268,6 +288,7 @@ def main() -> int:
     report: list[str] = []
     new_tracks = update_tracks(read(TRACKS_JS), songs, today, report)
     new_stats = update_stats(read(STATS_JS), total, songs, album_streams, today, report)
+    new_history = update_history(read(HISTORY_JS), new_stats, today, report) if HISTORY_JS.exists() else None
     print("\n".join(report))
 
     if args.dry_run:
@@ -275,6 +296,8 @@ def main() -> int:
         return 0
     write(TRACKS_JS, new_tracks)
     write(STATS_JS, new_stats)
+    if new_history is not None:
+        write(HISTORY_JS, new_history)
     print("Fichiers écrits.")
     return 0
 

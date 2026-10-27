@@ -12,44 +12,13 @@
   const TYPES = { sample: "Sample", interpolation: "Interpolation", voix: "Voix / extrait parlé" };
   const state = { album: "all", query: "" };
 
-  // ---- Lecteur partagé : un seul extrait à la fois
-  const audio = new Audio();
-  let playingBtn = null;
-  function setBtn(btn, mode) {
-    btn.dataset.state = mode;
-    btn.textContent = { idle: "▶", load: "…", play: "❚❚", none: "—" }[mode];
-    btn.title = mode === "none" ? "Extrait introuvable sur iTunes" : mode === "play" ? "Pause" : "Écouter un extrait";
-    btn.disabled = mode === "none";
-  }
-  const stop = () => {
-    audio.pause();
-    if (playingBtn) setBtn(playingBtn, "idle");
-    playingBtn = null;
-  };
-  const real = () => !audio.src.startsWith("data:"); // ignore le son vide de déblocage
-  audio.addEventListener("ended", () => real() && stop());
-  audio.addEventListener("pause", () => { if (real() && playingBtn && !audio.ended) setBtn(playingBtn, "idle"); });
-
-  async function play(btn) {
-    if (playingBtn === btn && !audio.paused) return stop();
-    stop();
-    playingBtn = btn;
-    // Lecture lancée tout de suite dans le clic (sinon Safari la bloque), la source arrive ensuite
-    audio.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
-    audio.play().catch(() => {});
-    setBtn(btn, "load");
+  // ---- Écoute : lecteur partagé du site (js/player.js)
+  const stop = () => MiniPlayer.stop();
+  function play(btn) {
     const s = data[+btn.dataset.i];
-    const url = await (btn.dataset.side === "ye"
-      ? Previews.ye({ titre: s.titre, albumId: s.album })
-      : Previews.any(s.sample.artiste, s.sample.titre)
-    ).catch(() => null);
-    if (playingBtn !== btn) return; // un autre bouton a été cliqué entre-temps
-    if (!url) {
-      playingBtn = null;
-      return setBtn(btn, "none");
-    }
-    audio.src = url;
-    audio.play().then(() => setBtn(btn, "play")).catch(() => stop());
+    MiniPlayer.toggle(btn, () =>
+      btn.dataset.side === "ye" ? Previews.ye({ titre: s.titre, albumId: s.album }) : Previews.any(s.sample.artiste, s.sample.titre)
+    );
   }
 
   // ---- Rendu
@@ -139,7 +108,6 @@
     const alb = e.target.closest("[data-album]");
     if (alb) openAlbum(alb.dataset.album);
   });
-  document.addEventListener("tab-change", (e) => { if (e.detail !== "samples") stop(); });
   document.addEventListener("cover-loaded", (e) => {
     const img = covers[e.detail]?.img;
     const cov = root.querySelector(`.sm-album[data-album="${e.detail}"] .sm-cov`);

@@ -11,14 +11,22 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
 - **Fiche détaillée** par album : date, label, place au Billboard 200, titres clés, distinctions, lien Apple Music — navigation avec ← →
 - **Graphique** de la longueur des albums
 - **Mode clair / sombre** : suit le réglage du système, bouton ☀ / ☾ pour forcer l'un ou l'autre
-- **Onglets** (lien direct possible : `#samples`, `#classement`, `#defi`, `#blind-test`, `#plus-ou-moins`) :
+- **Fiches album** : ▶ sur chaque numéro de la tracklist pour écouter un extrait, et courbe des streams Spotify
+- **Onglets** (lien direct possible : `#comparer`, `#samples`, `#invites`, `#classement`, `#defi`, `#jeux/…`) :
+  - **Comparer** : deux albums côte à côte, le meilleur chiffre de chaque ligne mis en valeur
   - **Samples** : les morceaux d'origine qu'il a samplés, à écouter côte à côte avec sa version
-  - **Mon classement** : tier list S → D des albums, ou des morceaux de chaque album (menu en haut), par glisser-déposer, exportable en image
+  - **Invités** : graphe de tous les artistes en featuring (plus ils sont proches du centre, plus ils reviennent souvent)
+  - **Mon classement** : tier list S → D des albums ou des morceaux de chaque album, export en image,
+    partage par lien (l'ami voit ton classement au-dessus du sien) et « Mon top global » (tous tes sons en S et A)
   - **Défi du jour** : 5 morceaux, les mêmes pour tout le monde chaque jour ; série de jours et résultat à partager en emojis
-  - **Blind test** : retrouve le morceau (ou l'album) à partir d'un extrait de 2, 5, 10 ou 20 s
-  - **Plus ou moins** : quel morceau a le plus de streams Spotify ?
+  - **Jeux** :
+    - *Blind test* : retrouve le morceau ou l'album à partir d'un extrait de 2 à 20 s — 10 manches, contre la montre (60 s) ou en duel à deux sur le même écran (buzzers A et L)
+    - *Pochette floue* : devine l'album d'après sa pochette pixelisée
+    - *Devine l'année* : place un morceau sur la frise 2004 → aujourd'hui
+    - *Plus ou moins* : quel morceau a le plus de streams Spotify ?
 - **Installable (PWA)** : « Installer l'application » dans le navigateur ; la discographie reste consultable hors ligne
-- **Streams mis à jour automatiquement** chaque lundi par GitHub Actions (voir plus bas)
+- **Aperçu de lien** : image et titre quand le lien est partagé (WhatsApp, Discord…)
+- **Streams mis à jour automatiquement** chaque lundi par GitHub Actions, avec historique pour les courbes (voir plus bas)
 
 Extraits audio : aperçus de 30 s de l'API iTunes Search (il faut être en ligne pour les jeux audio).
 
@@ -36,15 +44,19 @@ ye-discographie/
 ├── manifest.webmanifest   ← infos de l'application installable
 ├── sw.js                  ← service worker (hors ligne)
 ├── css/style.css
-├── icons/                 ← icônes de l'application
+├── icons/                 ← icônes de l'application + og-image.png (aperçu de lien)
 ├── js/
-│   ├── app.js             ← affichage, filtres, fiche album
+│   ├── app.js             ← affichage, filtres, fiche album, stats, courbes
 │   ├── covers.js          ← chargement des pochettes (API iTunes)
 │   ├── previews.js        ← recherche des extraits audio (API iTunes)
-│   ├── blindtest.js       ← blind test + défi du jour
+│   ├── player.js          ← mini-lecteur d'extraits (fiches, samples, devine l'année)
+│   ├── blindtest.js       ← blind test (solo, chrono, duel) + défi du jour
+│   ├── jeux.js            ← pochette floue + devine l'année
 │   ├── game.js            ← jeu « Plus ou moins »
+│   ├── comparer.js        ← comparateur d'albums
+│   ├── invites.js         ← graphe des invités
 │   ├── samples.js         ← page Samples
-│   ├── tierlist.js        ← Mon classement
+│   ├── tierlist.js        ← Mon classement (albums, morceaux, partage, top global)
 │   ├── theme.js           ← mode clair / sombre
 │   └── tabs.js            ← navigation entre les onglets
 ├── img/                   ← tes pochettes perso (optionnel)
@@ -53,6 +65,7 @@ ye-discographie/
 │   ├── tracklists.js      ← tracklists : "Titre | Invités | Durée"
 │   ├── stats.js           ← ventes, certifications, streams des albums
 │   ├── track-streams.js   ← streams Spotify par morceau
+│   ├── history.js         ← historique des streams (une ligne par lundi)
 │   └── samples.js         ← liste des samples
 ├── scripts/update_streams.py           ← mise à jour des streams depuis kworb.net
 └── .github/workflows/update-streams.yml ← lance le script chaque lundi
@@ -77,14 +90,20 @@ Pour un lien direct : `liens: { spotify: "https://open.spotify.com/album/…" }`
 
 ## Mise à jour automatique des streams
 
-Chaque lundi matin, GitHub Actions lance `scripts/update_streams.py`, qui lit les pages kworb.net de Kanye
-et met à jour `data/track-streams.js` et `data/stats.js`, puis commite le résultat.
+Chaque lundi matin, GitHub Actions lance `scripts/update_streams.py`, qui lit les pages kworb.net de Kanye,
+met à jour `data/track-streams.js` et `data/stats.js`, ajoute une ligne à `data/history.js` (les courbes),
+puis commite le résultat.
 
 - Lancement manuel : onglet **Actions** du dépôt → *Mise à jour des streams* → *Run workflow*.
 - Le dépôt reçoit donc des commits du robot : fais un **Pull** dans VS Code avant de travailler.
 - En local : `python scripts/update_streams.py --dry-run` (affiche les changements sans rien écrire).
 - Le script met à jour les morceaux déjà présents, sans en ajouter. Il ignore une valeur qui baisse ou qui explose.
   *Kids See Ghosts* (publié sous un autre nom d'artiste) et *Vultures 2* restent à mettre à jour à la main.
+
+## Aperçu de lien
+
+Les balises `og:` de `index.html` pointent vers `https://melcoloy.github.io/kanyewest/`. Si l'adresse
+GitHub Pages du site est différente, remplace-la dans `og:url` et `og:image`.
 
 ## Application installable (PWA)
 

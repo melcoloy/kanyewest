@@ -166,6 +166,7 @@ const statsState = { key: "date", dir: 1 };
 
 function renderStatsSection() {
   renderSpotify();
+  renderHistory();
   renderFirstWeek();
   renderStatsTable();
   renderSingles();
@@ -294,6 +295,57 @@ function renderSingles() {
     .join("");
 }
 
+// ---------- Historique des streams (data/history.js) ----------
+const HIST = (window.STREAMS_HISTORY || []).filter((h) => h && h.date).sort((x, y) => x.date.localeCompare(y.date));
+const fmtShort = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("fr-BE", { day: "numeric", month: "short" });
+const fmtDelta = (n) => (n >= 1e9 ? `${(n / 1e9).toFixed(2).replace(".", ",")} Md` : n >= 1e6 ? `${Math.round(n / 1e6)} M` : `${Math.round(n / 1e3)} k`);
+
+// Courbe SVG simple : points = [{ date, v }]
+function lineChart(points, { height = 140 } = {}) {
+  const W = 600, H = height, P = 6;
+  const vs = points.map((p) => p.v);
+  const min = Math.min(...vs), max = Math.max(...vs);
+  const t0 = new Date(points[0].date).getTime(), t1 = new Date(points.at(-1).date).getTime();
+  const x = (d) => P + ((new Date(d).getTime() - t0) / (t1 - t0 || 1)) * (W - P * 2);
+  const y = (v) => H - P - ((v - min) / (max - min || 1)) * (H - P * 2);
+  const pts = points.map((p) => `${x(p.date).toFixed(1)},${y(p.v).toFixed(1)}`);
+  const last = points.at(-1);
+  return `
+    <svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Évolution des streams">
+      <polygon class="chart-area" points="${P},${H - P} ${pts.join(" ")} ${W - P},${H - P}" />
+      <polyline class="chart-line" points="${pts.join(" ")}" vector-effect="non-scaling-stroke" />
+    </svg>
+    <div class="chart-axis"><span>${fmtShort(points[0].date)}</span><span>${fmtShort(last.date)}</span></div>`;
+}
+
+// Résumé « +X depuis le dernier relevé » + courbe, ou un message tant qu'il n'y a qu'un relevé
+function historyBlock(points, label) {
+  if (!points.length) return "";
+  if (points.length < 2) {
+    return `<p class="muted hist-wait">La courbe se construit à chaque relevé hebdomadaire (premier relevé le ${fmtDate(points[0].date)}).</p>`;
+  }
+  const [prev, last] = points.slice(-2);
+  const first = points[0];
+  return `
+    <div class="hist-head">
+      <span><b>+${fmtDelta(last.v - prev.v)}</b> depuis le ${fmtShort(prev.date)}</span>
+      <span class="muted">+${fmtDelta(last.v - first.v)} depuis le ${fmtShort(first.date)} · ${label}</span>
+    </div>
+    ${lineChart(points)}`;
+}
+
+function renderHistory() {
+  const el = $("#sp-history");
+  if (!el) return;
+  el.innerHTML = historyBlock(HIST.filter((h) => h.total).map((h) => ({ date: h.date, v: h.total })), "toute la carrière");
+}
+
+function renderAlbumHistory(a) {
+  const pts = HIST.filter((h) => h.albums?.[a.id]).map((h) => ({ date: h.date, v: h.albums[a.id] }));
+  if (!pts.length) return "";
+  return `<h3>Streams Spotify <span class="h3-meta">${fmtStreams(pts.at(-1).v)}</span></h3>${historyBlock(pts, "cet album")}`;
+}
+
 // ---------- Modale ----------
 function openAlbum(id) {
   // Si l'album est masqué par le filtre, on navigue dans la liste complète
@@ -305,6 +357,7 @@ function openAlbum(id) {
 }
 
 function renderModal() {
+  window.MiniPlayer?.stop(); // on change d'album : on coupe l'extrait en cours
   const a = visible[current];
   const facts = [
     ["Sortie", fmtDate(a.date)],
@@ -326,6 +379,7 @@ function renderModal() {
         ${facts.map(([k, v]) => `<div class="fact"><span>${k}</span><b>${escapeHtml(v)}</b></div>`).join("")}
       </div>
       <p>${escapeHtml(a.resume)}</p>
+      ${renderAlbumHistory(a)}
       <h3>Titres clés</h3>
       <ul class="tags">${a.titresCles.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>
       ${
@@ -372,13 +426,17 @@ function renderTracklist(a) {
   const hasSt = maxSt > 0;
 
   return `
-    <h3>Tracklist <span class="h3-meta">${t.length} titres${total}${nbFeats ? ` · ${nbFeats} invités` : ""}</span></h3>
+    <h3>Tracklist <span class="h3-meta">${t.length} titres${total}${nbFeats ? ` · ${nbFeats} invités` : ""}${a.id === "donda-2" ? "" : " · clique sur un numéro pour écouter un extrait"}</span></h3>
     <ol class="tracklist">
       ${t
         .map(
           (x, i) => `
         <li>
-          <span class="tr-num">${i + 1}</span>
+          ${
+            a.id === "donda-2" // la version Stem Player n'est pas sur les plateformes
+              ? `<span class="tr-num">${i + 1}</span>`
+              : `<button class="tr-num tr-play" data-i="${i}" data-label="${i + 1}" data-state="idle" aria-label="Écouter un extrait">${i + 1}</button>`
+          }
           <span class="tr-title">${escapeHtml(x.titre)}${
             x.feats.length
               ? `<span class="tr-feat">feat. ${x.feats
@@ -462,8 +520,20 @@ function bindEvents() {
     if (e.target === $("#modal")) $("#modal").close();
   });
 
-  // Quand on ferme, on remet la liste filtrée
-  $("#modal").addEventListener("close", renderGrid);
+  // Quand on ferme, on coupe l'extrait et on remet la liste filtrée
+  $("#modal").addEventListener("close", () => {
+    window.MiniPlayer?.stop();
+    renderGrid();
+  });
+
+  // ▶ sur un numéro de la tracklist : extrait iTunes (js/player.js + js/previews.js)
+  $("#modal").addEventListener("click", (e) => {
+    const b = e.target.closest(".tr-play");
+    if (!b) return;
+    const a = visible[current];
+    const t = tracks[a.id][+b.dataset.i];
+    MiniPlayer.toggle(b, () => Previews.ye({ titre: t.titre, albumId: a.id }));
+  });
 
   document.addEventListener("keydown", (e) => {
     const row = e.target.closest?.("#stats-table tr[data-id], #singles li[data-id], #sp-songs li[data-id]");
