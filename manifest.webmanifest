@@ -1,0 +1,20 @@
+{
+  "name": "Ye — Discographie interactive",
+  "short_name": "Ye",
+  "description": "Discographie de Kanye West / Ye : albums, stats, samples, blind test et défi du jour.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b0b0c",
+  "theme_color": "#0b0b0c",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Défi du jour", "url": "./#defi" },
+    { "name": "Blind test", "url": "./#blind-test" }
+  ]
+}

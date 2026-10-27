@@ -436,6 +436,7 @@ function bindEvents() {
     $("#search").value = f.dataset.feat;
     state.query = f.dataset.feat.toLowerCase();
     $("#modal").close();
+    window.showTab?.("disco"); // la fiche peut avoir été ouverte depuis un jeu
     document.querySelector(".controls").scrollIntoView({ behavior: "smooth" });
   });
 

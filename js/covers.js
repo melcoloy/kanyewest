@@ -110,5 +110,6 @@ window.Covers = (() => {
     }
   }
 
-  return { loadAll };
+  // jsonp et ARTIST servent aussi au blind test (js/blindtest.js) pour trouver les extraits audio
+  return { loadAll, jsonp, ARTIST };
 })();
