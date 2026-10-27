@@ -13,7 +13,7 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
 - **Mode clair / sombre** : suit le réglage du système, bouton ☀ / ☾ pour forcer l'un ou l'autre
 - **Onglets** (lien direct possible : `#samples`, `#classement`, `#defi`, `#blind-test`, `#plus-ou-moins`, `#paroles`) :
   - **Samples** : les morceaux d'origine qu'il a samplés, à écouter côte à côte avec sa version
-  - **Mon classement** : tier list S → D des albums par glisser-déposer, exportable en image
+  - **Mon classement** : tier list S → D des albums, ou des morceaux de chaque album (menu en haut), par glisser-déposer, exportable en image
   - **Défi du jour** : 5 morceaux, les mêmes pour tout le monde chaque jour ; série de jours et résultat à partager en emojis
   - **Blind test** : retrouve le morceau (ou l'album) à partir d'un extrait de 2, 5, 10 ou 20 s
   - **Plus ou moins** : quel morceau a le plus de streams Spotify ?

@@ -1,5 +1,6 @@
-// ---------- « Mon classement » (tier list des albums) ----------
-// Glisser-déposer les pochettes dans les rangs S → D (souris ou doigt).
+// ---------- « Mon classement » (tier lists) ----------
+// Classe les albums, ou les morceaux d'un album (menu en haut), dans les rangs S → D.
+// Glisser-déposer les pochettes / titres (souris ou doigt).
 // Sans glisser : clique / tape une pochette puis un rang, ou au clavier : sélectionne une
 // pochette (Entrée) puis appuie sur S, A, B, C, D (ou 0 pour la remettre « à classer »).
 // Le classement est gardé dans le navigateur et peut être exporté en image PNG.
@@ -16,29 +17,57 @@
     { id: "C", color: "#8f8ae0" },
     { id: "D", color: "#d97a8c" },
   ];
-  const KEY = "ye-classement";
-  const ids = albums.map((a) => a.id);
   const byId = Object.fromEntries(albums.map((a) => [a.id, a]));
+  const SCOPE_KEY = "ye-classement-vue";
+  // Albums qui ont une tracklist (Donda 2 compris : la version Stem Player se classe aussi)
+  const trackAlbums = albums.filter((a) => (tracks[a.id] || []).length);
+
+  // Ce qu'on classe : "albums", ou l'id d'un album pour classer ses morceaux
+  let scope = "albums";
+  try { scope = localStorage.getItem(SCOPE_KEY) || "albums"; } catch {}
+  if (scope !== "albums" && !byId[scope]) scope = "albums";
+  const isAlbums = () => scope === "albums";
+  const KEY = () => (isAlbums() ? "ye-classement" : `ye-classement-${scope}`);
+  // Éléments à classer : ids d'albums, ou titres des morceaux (sans les skits)
+  const itemsOf = (sc) =>
+    sc === "albums" ? albums.map((a) => a.id) : (tracks[sc] || []).map((t) => t.titre).filter((t) => !/\(skit/i.test(t));
+  let ids = itemsOf(scope);
+  const sel = (id) => `.tl-tile[data-id="${CSS.escape(id)}"]`;
 
   // ---- État : { S: [...], A: [...], ..., pool: [...] }
   function load() {
+    ids = itemsOf(scope);
+    const known = new Set(ids);
     let saved = {};
-    try { saved = JSON.parse(localStorage.getItem(KEY)) || {}; } catch {}
+    try { saved = JSON.parse(localStorage.getItem(KEY())) || {}; } catch {}
     const st = { pool: [] };
     const placed = new Set();
     for (const t of TIERS) {
-      st[t.id] = (saved[t.id] || []).filter((id) => byId[id] && !placed.has(id));
+      st[t.id] = (saved[t.id] || []).filter((id) => known.has(id) && !placed.has(id));
       st[t.id].forEach((id) => placed.add(id));
     }
-    st.pool = ids.filter((id) => !placed.has(id)); // nouveaux albums → « à classer »
+    st.pool = ids.filter((id) => !placed.has(id)); // nouveaux éléments → « à classer »
     return st;
   }
   let state = load();
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
+  const save = () => { try { localStorage.setItem(KEY(), JSON.stringify(state)); } catch {} };
+  // Nombre de morceaux déjà classés pour un album (affiché dans le menu)
+  function progress(id) {
+    try {
+      const st = JSON.parse(localStorage.getItem(`ye-classement-${id}`)) || {};
+      return TIERS.reduce((n, t) => n + (st[t.id] || []).length, 0);
+    } catch { return 0; }
+  }
   let selected = null;
 
   // ---- Rendu
   const tile = (id) => {
+    if (!isAlbums()) {
+      const n = (tracks[scope] || []).findIndex((t) => t.titre === id) + 1;
+      return `<button class="tl-tile tl-chip${selected === id ? " selected" : ""}" data-id="${escapeHtml(id)}" aria-label="${escapeHtml(id)}">
+        <span class="tl-num">${n}</span>${escapeHtml(id)}
+      </button>`;
+    }
     const a = byId[id];
     const img = covers[id]?.img;
     return `<button class="tl-tile${selected === id ? " selected" : ""}" data-id="${id}" title="${escapeHtml(a.titre)} (${a.date.slice(0, 4)})" aria-label="${escapeHtml(a.titre)}" style="background:${gradient(a.palette)}">
@@ -48,9 +77,26 @@
 
   function render() {
     const nbPlaced = ids.length - state.pool.length;
+    const what = isAlbums() ? "albums" : "titres";
+    const a = byId[scope];
     root.innerHTML = `
+      <div class="tl-scope">
+        <label class="bt-label" for="tl-scope">Que veux-tu classer ?</label>
+        <select id="tl-scope">
+          <option value="albums"${isAlbums() ? " selected" : ""}>Les albums</option>
+          <optgroup label="Les morceaux d'un album">
+            ${trackAlbums
+              .map((x) => {
+                const n = itemsOf(x.id).length, done = progress(x.id);
+                return `<option value="${x.id}"${x.id === scope ? " selected" : ""}>${escapeHtml(x.titre)} (${x.date.slice(0, 4)})${done ? ` · ${done}/${n} classés` : ""}</option>`;
+              })
+              .join("")}
+          </optgroup>
+        </select>
+        ${a ? `<span class="tl-scope-cov" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img src="${covers[a.id].img}" alt="">` : ""}</span>` : ""}
+      </div>
       <div class="tl-bar">
-        <p class="muted">${nbPlaced}/${ids.length} albums classés · Glisse les pochettes, ou clique sur une pochette puis sur un rang.</p>
+        <p class="muted">${nbPlaced}/${ids.length} ${what} classés · Glisse les ${isAlbums() ? "pochettes" : "titres"}, ou clique sur ${isAlbums() ? "une pochette" : "un titre"} puis sur un rang.</p>
         <div class="tl-btns">
           <button class="g-btn" data-act="export"${nbPlaced ? "" : " disabled"}>Exporter en image</button>
           <button class="bt-link" data-act="reset">Tout remettre à zéro</button>
@@ -65,7 +111,14 @@
         ).join("")}
       </div>
       <p class="bt-label tl-pool-label">À classer</p>
-      <div class="tl-zone tl-pool" data-zone="pool" aria-label="Albums à classer">${state.pool.map(tile).join("") || `<span class="muted tl-done">Tous les albums sont classés 🎉</span>`}</div>`;
+      <div class="tl-zone tl-pool" data-zone="pool" aria-label="À classer">${state.pool.map(tile).join("") || `<span class="muted tl-done">Tous les ${what} sont classés 🎉</span>`}</div>`;
+    root.querySelector("#tl-scope").addEventListener("change", (e) => {
+      scope = e.target.value;
+      try { localStorage.setItem(SCOPE_KEY, scope); } catch {}
+      selected = null;
+      state = load();
+      render();
+    });
   }
 
   function move(id, zone, index = Infinity) {
@@ -74,7 +127,7 @@
     selected = null;
     save();
     render();
-    root.querySelector(`.tl-tile[data-id="${id}"]`)?.focus({ preventScroll: true });
+    root.querySelector(sel(id))?.focus({ preventScroll: true });
   }
 
   // ---- Glisser-déposer (pointer events : marche à la souris et au doigt)
@@ -149,7 +202,7 @@
     if (suppressClick) return;
     const act = e.target.closest("[data-act]")?.dataset.act;
     if (act === "reset") {
-      if (!confirm("Remettre tous les albums dans « À classer » ?")) return;
+      if (!confirm(`Remettre tous les ${isAlbums() ? "albums" : "titres de cet album"} dans « À classer » ?`)) return;
       state = { pool: [...ids], ...Object.fromEntries(TIERS.map((t) => [t.id, []])) };
       selected = null;
       save();
@@ -190,32 +243,51 @@
     btn.disabled = true;
     btn.textContent = "Création…";
     const S = 2; // résolution x2
-    const W = 1200, LABEL = 110, TILE = 104, GAP = 8, PAD = 24, HEAD = 84;
-    const perLine = Math.floor((W - PAD * 2 - LABEL - GAP) / (TILE + GAP));
-    const rows = TIERS.filter((t) => state[t.id].length);
-    const rowH = (n) => Math.max(1, Math.ceil(n / perLine)) * (TILE + GAP) + GAP;
-    const H = HEAD + rows.reduce((h, t) => h + rowH(state[t.id].length) + 6, 0) + PAD + 24;
+    const W = 1200, LABEL = 110, GAP = 8, PAD = 24, HEAD = 84;
+    const albumsMode = isAlbums();
+    const TILE = albumsMode ? 104 : 44; // hauteur d'une pochette / d'un titre
+    const font = (w, px) => `${w} ${px}px "Archivo Black", Inter, system-ui, sans-serif`;
+    const chipFont = `600 17px Inter, system-ui, sans-serif`;
 
     const cv = document.createElement("canvas");
+    const ctx = cv.getContext("2d");
+    // Largeur de chaque élément, puis placement ligne par ligne dans chaque rang
+    ctx.font = chipFont;
+    const widthOf = (id) => (albumsMode ? TILE : Math.min(W - PAD * 2 - LABEL - GAP * 2, ctx.measureText(id).width + 28));
+    const layout = (list) => {
+      const maxX = W - PAD - GAP;
+      let x = PAD + LABEL + GAP, line = 0;
+      const pos = list.map((id) => {
+        const w = widthOf(id);
+        if (x + w > maxX && x > PAD + LABEL + GAP) { x = PAD + LABEL + GAP; line++; }
+        const p = { id, x, line, w };
+        x += w + GAP;
+        return p;
+      });
+      return { pos, lines: (pos.at(-1)?.line ?? 0) + 1 };
+    };
+    const rows = TIERS.filter((t) => state[t.id].length).map((t) => ({ t, ...layout(state[t.id]) }));
+    const rowH = (lines) => Math.max(albumsMode ? TILE + GAP * 2 : 80, lines * (TILE + GAP) + GAP);
+    const H = HEAD + rows.reduce((h, r) => h + rowH(r.lines) + 6, 0) + PAD + 24;
+
     cv.width = W * S;
     cv.height = H * S;
-    const ctx = cv.getContext("2d");
     ctx.scale(S, S);
     ctx.fillStyle = "#0b0b0c";
     ctx.fillRect(0, 0, W, H);
-    const font = (w, px) => `${w} ${px}px "Archivo Black", Inter, system-ui, sans-serif`;
     ctx.fillStyle = "#f2f2f2";
     ctx.font = font(900, 30);
     ctx.textBaseline = "alphabetic";
     ctx.fillText("MON CLASSEMENT", PAD, 50);
     ctx.fillStyle = "#9a9aa2";
     ctx.font = `500 16px Inter, system-ui, sans-serif`;
-    ctx.fillText("Kanye West / Ye — albums studio", PAD, 72);
+    const a = byId[scope];
+    ctx.fillText(albumsMode ? "Kanye West / Ye — albums studio" : `${a.titre} (${a.date.slice(0, 4)}) — Kanye West / Ye`, PAD, 72);
 
-    const imgs = Object.fromEntries(await Promise.all(ids.map(async (id) => [id, await loadImg(covers[id]?.img)])));
+    const imgs = albumsMode ? Object.fromEntries(await Promise.all(ids.map(async (id) => [id, await loadImg(covers[id]?.img)]))) : {};
     let y = HEAD;
-    for (const t of rows) {
-      const h = rowH(state[t.id].length);
+    for (const { t, pos, lines } of rows) {
+      const h = rowH(lines);
       ctx.fillStyle = t.color;
       ctx.fillRect(PAD, y, LABEL, h);
       ctx.fillStyle = "#151517";
@@ -225,22 +297,35 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(t.id, PAD + LABEL / 2, y + h / 2);
-      state[t.id].forEach((id, i) => {
-        const x = PAD + LABEL + GAP + (i % perLine) * (TILE + GAP);
-        const ty = y + GAP + Math.floor(i / perLine) * (TILE + GAP);
-        const a = byId[id];
+      const top = y + (h - (lines * (TILE + GAP) - GAP)) / 2;
+      for (const { id, x, line, w } of pos) {
+        const ty = top + line * (TILE + GAP);
+        if (!albumsMode) {
+          // Titre : pastille arrondie
+          ctx.fillStyle = "#26262b";
+          ctx.beginPath();
+          ctx.roundRect ? ctx.roundRect(x, ty, w, TILE, 8) : ctx.rect(x, ty, w, TILE);
+          ctx.fill();
+          ctx.fillStyle = "#f2f2f2";
+          ctx.font = chipFont;
+          ctx.textAlign = "left";
+          ctx.fillText(id, x + 14, ty + TILE / 2, w - 28);
+          continue;
+        }
+        const al = byId[id];
         if (imgs[id]) ctx.drawImage(imgs[id], x, ty, TILE, TILE);
         else {
           const g = ctx.createLinearGradient(x, ty, x + TILE, ty + TILE);
-          g.addColorStop(0, a.palette[0]);
-          g.addColorStop(1, a.palette[1]);
+          g.addColorStop(0, al.palette[0]);
+          g.addColorStop(1, al.palette[1]);
           ctx.fillStyle = g;
           ctx.fillRect(x, ty, TILE, TILE);
           ctx.fillStyle = "rgba(255,255,255,.9)";
           ctx.font = font(900, 26);
-          ctx.fillText(initials(a.titre), x + TILE / 2, ty + TILE / 2);
+          ctx.textAlign = "center";
+          ctx.fillText(initials(al.titre), x + TILE / 2, ty + TILE / 2);
         }
-      });
+      }
       ctx.textAlign = "left";
       y += h + 6;
     }
@@ -255,7 +340,7 @@
       if (!blob) return alert("Export impossible dans ce navigateur.");
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "ye-mon-classement.png";
+      a.download = albumsMode ? "ye-mon-classement.png" : `ye-classement-${scope}.png`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     }, "image/png");
