@@ -11,13 +11,12 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
 - **Fiche détaillée** par album : date, label, place au Billboard 200, titres clés, distinctions, lien Apple Music — navigation avec ← →
 - **Graphique** de la longueur des albums
 - **Mode clair / sombre** : suit le réglage du système, bouton ☀ / ☾ pour forcer l'un ou l'autre
-- **Onglets** (lien direct possible : `#samples`, `#classement`, `#defi`, `#blind-test`, `#plus-ou-moins`, `#paroles`) :
+- **Onglets** (lien direct possible : `#samples`, `#classement`, `#defi`, `#blind-test`, `#plus-ou-moins`) :
   - **Samples** : les morceaux d'origine qu'il a samplés, à écouter côte à côte avec sa version
   - **Mon classement** : tier list S → D des albums, ou des morceaux de chaque album (menu en haut), par glisser-déposer, exportable en image
   - **Défi du jour** : 5 morceaux, les mêmes pour tout le monde chaque jour ; série de jours et résultat à partager en emojis
   - **Blind test** : retrouve le morceau (ou l'album) à partir d'un extrait de 2, 5, 10 ou 20 s
   - **Plus ou moins** : quel morceau a le plus de streams Spotify ?
-  - **Paroles** : une citation qui se dévoile mot par mot (citations à ajouter toi-même dans `data/paroles.js`)
 - **Installable (PWA)** : « Installer l'application » dans le navigateur ; la discographie reste consultable hors ligne
 - **Streams mis à jour automatiquement** chaque lundi par GitHub Actions (voir plus bas)
 
@@ -44,7 +43,6 @@ ye-discographie/
 │   ├── previews.js        ← recherche des extraits audio (API iTunes)
 │   ├── blindtest.js       ← blind test + défi du jour
 │   ├── game.js            ← jeu « Plus ou moins »
-│   ├── paroles.js         ← mode Paroles
 │   ├── samples.js         ← page Samples
 │   ├── tierlist.js        ← Mon classement
 │   ├── theme.js           ← mode clair / sombre
@@ -55,8 +53,7 @@ ye-discographie/
 │   ├── tracklists.js      ← tracklists : "Titre | Invités | Durée"
 │   ├── stats.js           ← ventes, certifications, streams des albums
 │   ├── track-streams.js   ← streams Spotify par morceau
-│   ├── samples.js         ← liste des samples
-│   └── paroles.js         ← tes citations pour le mode Paroles
+│   └── samples.js         ← liste des samples
 ├── scripts/update_streams.py           ← mise à jour des streams depuis kworb.net
 └── .github/workflows/update-streams.yml ← lance le script chaque lundi
 ```
@@ -88,11 +85,6 @@ et met à jour `data/track-streams.js` et `data/stats.js`, puis commite le résu
 - En local : `python scripts/update_streams.py --dry-run` (affiche les changements sans rien écrire).
 - Le script met à jour les morceaux déjà présents, sans en ajouter. Il ignore une valeur qui baisse ou qui explose.
   *Kids See Ghosts* (publié sous un autre nom d'artiste) et *Vultures 2* restent à mettre à jour à la main.
-
-## Mode Paroles
-
-`data/paroles.js` est vide au départ : ajoute une ligne par citation,
-`{ album: "graduation", titre: "Stronger", texte: "…" },`. Garde des citations courtes (une ou deux lignes).
 
 ## Application installable (PWA)
 
