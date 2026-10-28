@@ -6,13 +6,24 @@ let current = -1;   // index dans `visible` de l'album ouvert dans la modale
 const covers = {};  // id → { img, url } une fois la pochette chargée
 
 // "Titre | Invités | 3:21" → { titre, feats: [...], duree }
+const parseTrack = (l) => {
+  const [titre, feats = "", duree = ""] = l.split("|").map((x) => x.trim());
+  return { titre, feats: feats ? feats.split(/,\s*/) : [], duree };
+};
 const tracks = {};
-for (const [id, lines] of Object.entries(window.TRACKLISTS || {})) {
-  tracks[id] = lines.map((l) => {
-    const [titre, feats = "", duree = ""] = l.split("|").map((x) => x.trim());
-    return { titre, feats: feats ? feats.split(/,\s*/) : [], duree };
-  });
+for (const [id, lines] of Object.entries(window.TRACKLISTS || {})) tracks[id] = lines.map(parseTrack);
+
+// Autres éditions (deluxe…) : albumId → [{ id, nom, date, tracks, nouveaux, modifies, note }]
+const editions = {};
+for (const [id, list] of Object.entries(window.TRACKLIST_EDITIONS || {})) {
+  editions[id] = list.map((e) => ({ ...e, tracks: e.pistes.map(parseTrack), nouveaux: e.nouveaux || [], modifies: e.modifies || {} }));
 }
+const editionChoice = {}; // albumId → id de l'édition affichée ("standard" par défaut)
+// Morceaux d'un album, toutes éditions confondues (sans doublon) : pour les classements et les invités
+const allTracks = (id) => {
+  const seen = new Set();
+  return [tracks[id] || [], ...(editions[id] || []).map((e) => e.tracks)].flat().filter((t) => !seen.has(t.titre) && seen.add(t.titre));
+};
 
 // ---------- Utilitaires ----------
 const $ = (sel) => document.querySelector(sel);
@@ -415,18 +426,32 @@ function renderListen(a) {
 }
 
 function renderTracklist(a) {
-  const t = tracks[a.id];
+  const eds = editions[a.id] || [];
+  const ed = eds.find((e) => e.id === editionChoice[a.id]) || null; // null = édition standard
+  const t = ed ? ed.tracks : tracks[a.id];
   if (!t) return "";
+  // Choix de l'édition (seulement si l'album en a plusieurs)
+  const picker = eds.length
+    ? `<div class="ed-picker" role="group" aria-label="Édition">
+        ${[{ id: "standard", nom: "Standard", n: tracks[a.id].length }, ...eds.map((e) => ({ id: e.id, nom: e.nom, n: e.tracks.length, date: e.date }))]
+          .map(
+            (e) => `<button class="ed-btn${(ed?.id || "standard") === e.id ? " active" : ""}" data-edition="${e.id}" aria-pressed="${(ed?.id || "standard") === e.id}">
+              ${escapeHtml(e.nom)} <span>${e.n} titres${e.date ? ` · ${fmtDate(e.date).replace(/^\d+ /, "")}` : ""}</span></button>`
+          )
+          .join("")}
+      </div>`
+    : "";
   const secs = t.map((x) => toSec(x.duree));
   const total = secs.every((x) => !isNaN(x)) ? ` · ${fmtDuree(secs.reduce((s, x) => s + x, 0))}` : "";
   const nbFeats = new Set(t.flatMap((x) => x.feats)).size;
-  const note = (window.TRACKLIST_NOTES || {})[a.id];
+  const note = ed ? ed.note : (window.TRACKLIST_NOTES || {})[a.id];
   const st = t.map((x) => trackStreams(a.id, x.titre));
   const maxSt = Math.max(0, ...st.filter(Boolean));
   const hasSt = maxSt > 0;
 
-  return `
+  return `<div id="tracklist-wrap">
     <h3>Tracklist <span class="h3-meta">${t.length} titres${total}${nbFeats ? ` · ${nbFeats} invités` : ""}${a.id === "donda-2" ? "" : " · clique sur un numéro pour écouter un extrait"}</span></h3>
+    ${picker}
     <ol class="tracklist">
       ${t
         .map(
@@ -435,9 +460,15 @@ function renderTracklist(a) {
           ${
             a.id === "donda-2" // la version Stem Player n'est pas sur les plateformes
               ? `<span class="tr-num">${i + 1}</span>`
-              : `<button class="tr-num tr-play" data-i="${i}" data-label="${i + 1}" data-state="idle" aria-label="Écouter un extrait">${i + 1}</button>`
+              : `<button class="tr-num tr-play" data-i="${i}" data-titre="${escapeHtml(x.titre)}" data-label="${i + 1}" data-state="idle" aria-label="Écouter un extrait">${i + 1}</button>`
           }
           <span class="tr-title">${escapeHtml(x.titre)}${
+            ed?.nouveaux.includes(x.titre) ? ' <span class="tag new">nouveau</span>' : ""
+          }${
+            ed?.modifies[x.titre] ? ` <span class="tag new" title="${escapeHtml(ed.modifies[x.titre])}">modifié</span>` : ""
+          }${
+            ed?.modifies[x.titre] ? `<span class="tr-feat tr-change">${escapeHtml(ed.modifies[x.titre])}</span>` : ""
+          }${
             x.feats.length
               ? `<span class="tr-feat">feat. ${x.feats
                   .map((f) => `<button class="feat" data-feat="${escapeHtml(f)}">${escapeHtml(f)}</button>`)
@@ -455,8 +486,9 @@ function renderTracklist(a) {
         )
         .join("")}
     </ol>
-    ${hasSt ? `<p class="tr-note">Streams Spotify au ${fmtDate((window.STATS?.spotify?.date) || "2026-10-24")} (kworb.net).</p>` : ""}
-    ${note ? `<p class="tr-note">ⓘ ${escapeHtml(note)}</p>` : ""}`;
+    ${hasSt ? `<p class="tr-note">Streams Spotify${ed ? " de l'édition standard" : ""} au ${fmtDate((window.STATS?.spotify?.date) || "2026-10-24")} (kworb.net).</p>` : ""}
+    ${note ? `<p class="tr-note">ⓘ ${escapeHtml(note)}</p>` : ""}
+  </div>`;
 }
 
 function step(delta) {
@@ -526,13 +558,22 @@ function bindEvents() {
     renderGrid();
   });
 
+  // Choix de l'édition (standard / deluxe) : on ne redessine que la tracklist
+  $("#modal").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-edition]");
+    if (!b) return;
+    const a = visible[current];
+    editionChoice[a.id] = b.dataset.edition;
+    MiniPlayer.stop();
+    $("#tracklist-wrap").outerHTML = renderTracklist(a);
+  });
+
   // ▶ sur un numéro de la tracklist : extrait iTunes (js/player.js + js/previews.js)
   $("#modal").addEventListener("click", (e) => {
     const b = e.target.closest(".tr-play");
     if (!b) return;
     const a = visible[current];
-    const t = tracks[a.id][+b.dataset.i];
-    MiniPlayer.toggle(b, () => Previews.ye({ titre: t.titre, albumId: a.id }));
+    MiniPlayer.toggle(b, () => Previews.ye({ titre: b.dataset.titre, albumId: a.id }));
   });
 
   document.addEventListener("keydown", (e) => {

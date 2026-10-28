@@ -261,7 +261,7 @@ window.TRACKLISTS = {
     "This a Must||1:26",
     "Father|Travis Scott|2:49",
     "All the Love|André Troutman|3:49",
-    "Punch Drunk||1:59",
+    "Punch Drunk||1:48",
     "Whatever Works||1:59",
     "Mama's Favorite|Nine Vicious|2:34",
     "Sisters and Brothers||2:46",
@@ -283,6 +283,50 @@ window.TRACKLIST_NOTES = {
   "donda-2": "Version Stem Player (février 2022). La réédition YZY de 2025 a une tracklist différente.",
   "vultures-2": "Tracklist d'origine (août 2024) ; des titres ont été modifiés après la sortie.",
   "vultures-1": "Album crédité à ¥$ : seuls les invités officiellement crédités sont indiqués.",
-  bully: "Version streaming du 28 mars 2026. Don Toliver a été retiré de « Circles » le 2 avril. La réédition deluxe (juin 2026) ajoute « OK » (feat. Don Toliver), « Mission Control » (feat. The World Famous Tony Williams) et une version de « I Can't Wait » avec Lauryn Hill.",
+  bully: "Version streaming du 28 mars 2026. Le 2 avril, la voix de Don Toliver sur « Circles » a été remplacée par celle de Ye.",
   donda: "Invités d'après les crédits publiés à la sortie (août 2021) ; certains crédits ont évolué depuis. « Jail Pt. 2 » a d'abord été retiré du streaming.",
+};
+
+// Autres éditions d'un album (deluxe…), au choix dans la fiche.
+// pistes   : tracklist complète de l'édition, même format que plus haut
+// nouveaux : titres absents de l'édition standard (marqués « nouveau »)
+// modifies : titres présents dans les deux mais changés → explication affichée au survol
+// note     : remarque affichée sous la tracklist de cette édition
+// Source : Wikipedia (Bully (album)).
+window.TRACKLIST_EDITIONS = {
+  bully: [
+    {
+      id: "deluxe",
+      nom: "Deluxe",
+      date: "2026-06-19",
+      pistes: [
+        "King||2:06",
+        "This a Must||1:26",
+        "Father|Travis Scott|2:49",
+        "All the Love|André Troutman|3:49",
+        "Punch Drunk||1:48",
+        "Whatever Works||1:59",
+        "Mama's Favorite|Nine Vicious|2:34",
+        "Sisters and Brothers||2:46",
+        "Bully|CeeLo Green|2:27",
+        "Highs and Lows||1:51",
+        "I Can't Wait|Ms. Lauryn Hill|2:17",
+        "White Lines|André Troutman|2:10",
+        "Circles||1:31",
+        "Preacher Man||3:01",
+        "Beauty and the Beast||1:45",
+        "Damn||2:02",
+        "Last Breath|Peso Pluma|2:57",
+        "This One Here||3:01",
+        "OK|Don Toliver|2:38",
+        "Mission Control|The Wrldfms Tony Williams|1:52",
+      ],
+      nouveaux: ["OK", "Mission Control"],
+      modifies: {
+        "I Can't Wait": "Nouvelle version : Ms. Lauryn Hill chante le refrain",
+        "Last Breath": "Version un peu plus courte (2:57 au lieu de 3:06)",
+      },
+      note: "Réédition du 19 juin 2026 : deux titres inédits, une nouvelle version de « I Can't Wait », et un mixage et un mastering retouchés sur tout l'album.",
+    },
+  ],
 };

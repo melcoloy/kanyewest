@@ -884,6 +884,16 @@ dialog::backdrop { background: rgba(0,0,0,.7); backdrop-filter: blur(3px); }
 .tr-strack { width: 110px; flex: 0 0 110px; height: 4px; background: var(--line); border-radius: 0 3px 3px 0; overflow: hidden; }
 .tr-sbar { display: block; height: 100%; min-width: 2px; border-radius: 0 3px 3px 0; background: var(--bar); }
 .tag.top { color: var(--accent); border-color: var(--accent); }
+.tag.new { color: var(--ok-text); border-color: var(--ok-line); }
+.tr-change { color: var(--ok-text); }
+.ed-picker { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 10px; }
+.ed-btn {
+  font: inherit; font-weight: 600; font-size: .88rem; cursor: pointer; color: var(--text);
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px;
+}
+.ed-btn span { font-weight: 400; color: var(--muted); font-size: .8rem; margin-left: 4px; }
+.ed-btn:hover { border-color: var(--line-strong); }
+.ed-btn.active { border-color: var(--accent); background: var(--accent-soft); }
 .tr-dur { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .85rem; }
 .feat {
   background: none; border: none; padding: 0;

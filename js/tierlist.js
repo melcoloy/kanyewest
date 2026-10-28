@@ -32,7 +32,7 @@
   const KEY = () => (isAlbums() ? "ye-classement" : `ye-classement-${scope}`);
   // Éléments à classer : ids d'albums, ou titres des morceaux (sans les skits)
   const itemsOf = (sc) =>
-    sc === "albums" ? albums.map((a) => a.id) : sc === "top" ? [] : (tracks[sc] || []).map((t) => t.titre).filter((t) => !/\(skit/i.test(t));
+    sc === "albums" ? albums.map((a) => a.id) : sc === "top" ? [] : allTracks(sc).map((t) => t.titre).filter((t) => !/\(skit/i.test(t)); // éditions deluxe comprises
   let ids = itemsOf(scope);
   const sel = (id) => `.tl-tile[data-id="${CSS.escape(id)}"]`;
 
@@ -172,7 +172,7 @@
   // ---- Rendu
   const tile = (id) => {
     if (!isAlbums()) {
-      const n = (tracks[scope] || []).findIndex((t) => t.titre === id) + 1;
+      const n = allTracks(scope).findIndex((t) => t.titre === id) + 1;
       return `<button class="tl-tile tl-chip${selected === id ? " selected" : ""}" data-id="${escapeHtml(id)}" aria-label="${escapeHtml(id)}">
         <span class="tl-num">${n}</span>${escapeHtml(id)}
       </button>`;

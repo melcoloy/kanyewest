@@ -13,7 +13,11 @@
   const guests = new Map();
   const pairs = new Map();
   for (const a of albums) {
-    for (const t of tracks[a.id] || []) {
+    // Édition standard + titres nouveaux ou modifiés des éditions deluxe (ex. Lauryn Hill sur Bully deluxe)
+    const extra = (editions[a.id] || []).flatMap((e) =>
+      e.tracks.filter((t) => e.nouveaux.includes(t.titre) || e.modifies[t.titre]).map((t) => ({ ...t, titre: e.modifies[t.titre] ? `${t.titre} (${e.nom.toLowerCase()})` : t.titre }))
+    );
+    for (const t of [...(tracks[a.id] || []), ...extra]) {
       for (const f of t.feats) {
         if (!guests.has(f)) guests.set(f, { name: f, songs: [], first: a.date });
         guests.get(f).songs.push({ titre: t.titre, albumId: a.id });
