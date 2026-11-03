@@ -39,7 +39,7 @@ Ouvre simplement `index.html` dans un navigateur, ou dans VS Code avec l'extensi
 ## Structure
 
 ```
-ye-discographie/
+kanyewest/
 ├── index.html
 ├── manifest.webmanifest   ← infos de l'application installable
 ├── sw.js                  ← service worker (hors ligne)
@@ -118,4 +118,4 @@ Tracklists d'après Wikipedia (éditions standard à la sortie). Les invités so
 ## Mettre en ligne avec GitHub Pages
 
 Dans *Settings → Pages* du dépôt : *Source* = `Deploy from a branch`, branche `main`, dossier `/ (root)`.
-Le site sera disponible à `https://<ton-pseudo>.github.io/ye-discographie/`.
+Le site sera disponible à `https://melcoloy.github.io/kanyewest/` (l'adresse déjà utilisée par les balises `og:` de `index.html`).
