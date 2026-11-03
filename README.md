@@ -6,8 +6,8 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
 - **Pochettes** chargées automatiquement (API iTunes Search), ou tes propres images
 - **Liens d'écoute** : Spotify, Apple Music, Deezer, YouTube Music
 - **Tracklist complète** dans chaque fiche, avec durées et **invités crédités** — clic sur un invité = tous ses albums avec Ye
-- **Recherche** (album, morceau, invité, label, année)
-- **Filtres** solo / collaborations et **tri** (date, classement, longueur)
+- **Recherche** (album, morceau, invité, label, année), sans tenir compte des accents ni des majuscules : les morceaux trouvés (éditions deluxe comprises) s'affichent dans une liste, un clic ouvre la fiche sur le bon titre
+- **Filtres** par année, par album, solo / collaborations, et **tri** (date, classement, longueur)
 - **Fiche détaillée** par album : date, label, place au Billboard 200, titres clés, distinctions, lien Apple Music — navigation avec ← →
 - **Graphique** de la longueur des albums
 - **Mode clair / sombre** : suit le réglage du système, bouton ☀ / ☾ pour forcer l'un ou l'autre

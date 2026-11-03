@@ -58,7 +58,13 @@
   </nav>
 
   <section class="controls">
-    <input type="search" id="search" placeholder="Rechercher un album, un morceau, un invité…" aria-label="Rechercher" />
+    <input type="search" id="search" placeholder="Rechercher un album, un morceau, un invité…" aria-label="Rechercher" autocomplete="off" />
+    <select id="f-year" aria-label="Filtrer par année">
+      <option value="">Toutes les années</option>
+    </select>
+    <select id="f-album" aria-label="Filtrer par album">
+      <option value="">Tous les albums</option>
+    </select>
     <div class="chips" role="group" aria-label="Type d'album">
       <button class="chip active" data-type="all">Tous</button>
       <button class="chip" data-type="solo">Solo</button>
@@ -74,7 +80,15 @@
   </section>
 
   <main>
-    <p class="count" id="count"></p>
+    <div class="count-row">
+      <p class="count" id="count" aria-live="polite"></p>
+      <button class="reset-btn" id="f-reset" type="button" hidden>Effacer les filtres ✕</button>
+    </div>
+    <section class="track-hits" id="track-hits" hidden aria-labelledby="track-hits-title">
+      <h2 id="track-hits-title">Morceaux <span class="h3-meta" id="track-hits-n"></span></h2>
+      <ol class="hit-list" id="hit-list"></ol>
+      <button class="more-btn" id="hit-more" type="button" hidden></button>
+    </section>
     <div class="grid" id="grid"></div>
 
     <section class="stats-section" aria-labelledby="stats-title">

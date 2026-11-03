@@ -196,7 +196,7 @@ html { scroll-behavior: smooth; }
   gap: 12px;
   align-items: center;
 }
-#search, #sort {
+#search, #sort, #f-year, #f-album {
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--line);
@@ -204,7 +204,9 @@ html { scroll-behavior: smooth; }
   padding: 10px 16px;
   font: inherit;
 }
-#search { flex: 1 1 260px; }
+#search { flex: 1 1 100%; }
+#f-album { max-width: 280px; text-overflow: ellipsis; }
+#f-year.on, #f-album.on { border-color: var(--accent); color: var(--accent); }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip {
   background: var(--surface);
@@ -280,6 +282,49 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 48px; }
 .card-top span { color: var(--muted); }
 
 .empty { color: var(--muted); padding: 32px 0; }
+
+/* ---------- Recherche : filtres actifs + morceaux trouvés ---------- */
+.count-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.reset-btn, .more-btn {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: .82rem;
+  cursor: pointer;
+}
+.reset-btn:hover, .more-btn:hover, .reset-btn:focus-visible, .more-btn:focus-visible { color: var(--accent); border-color: var(--accent); outline: none; }
+.track-hits {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin: 4px 0 24px;
+}
+.track-hits h2 { font-size: 1.05rem; margin: 0 0 8px; }
+.hit-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 2px 18px; }
+.hit {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%;
+  background: none; border: 0; border-radius: 10px;
+  padding: 8px; margin: 0 -8px;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.hit:hover, .hit:focus-visible { background: var(--accent-soft); outline: none; }
+.hit-cov {
+  flex: 0 0 44px; width: 44px; height: 44px; border-radius: 6px; overflow: hidden;
+  display: grid; place-items: center; color: var(--on-color); font-size: .75rem; font-weight: 600;
+}
+.hit-cov img { width: 100%; height: 100%; object-fit: cover; }
+.hit-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.hit-title { font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+.hit-feat, .hit-album { color: var(--muted); font-size: .8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hit-dur { color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.hit mark { background: var(--accent-soft); color: var(--accent); border-radius: 3px; box-shadow: 0 0 0 1px var(--accent-soft); }
+.more-btn { margin-top: 10px; }
+.tracklist li.hit-row { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
 
 /* ---------- Stats ---------- */
 .stats-section { margin-top: 64px; }
@@ -954,6 +999,9 @@ footer {
 @media (max-width: 600px) {
   .hero { padding-top: 40px; }
   .hero, .controls, main, .timeline { padding-left: 16px; padding-right: 16px; }
+  #f-year, #f-album { flex: 1 1 140px; max-width: none; min-width: 0; padding-left: 12px; padding-right: 8px; font-size: .9rem; }
+  .hit-list { grid-template-columns: 1fr; }
+  .track-hits { padding: 12px 12px; }
   .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .cover-letters { font-size: 2.2rem; }
   .modal-cover { width: 90px; height: 90px; }
