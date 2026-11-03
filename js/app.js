@@ -1,6 +1,7 @@
 // ---------- État ----------
 const albums = [...window.ALBUMS].sort((a, b) => a.date.localeCompare(b.date));
-const state = { type: "all", query: "", sort: "date-asc" };
+const state = { type: "all", query: "", year: "", album: "", sort: "date-asc" };
+let hitsExpanded = false; // liste des morceaux trouvés dépliée ?
 let visible = [];   // albums affichés (après filtre + tri)
 let current = -1;   // index dans `visible` de l'album ouvert dans la modale
 const covers = {};  // id → { img, url } une fois la pochette chargée
@@ -109,14 +110,121 @@ function renderTimeline() {
 }
 
 // ---------- Filtre + tri ----------
+// Recherche sans tenir compte des majuscules, des accents ni des apostrophes typographiques
+const norm = (s) => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[’‘`]/g, "'").toLowerCase();
+
+// Filtres "structurels" (type, année, album), sans la recherche texte
+const inScope = (a) =>
+  (state.type === "all" || a.type === state.type) &&
+  (!state.year || year(a.date) === state.year) &&
+  (!state.album || a.id === state.album);
+
+const trackHit = (x) => norm(x.titre).includes(state.query) || x.feats.some((f) => norm(f).includes(state.query));
+
 function matches(a) {
-  if (state.type !== "all" && a.type !== state.type) return false;
+  if (!inScope(a)) return false;
   if (!state.query) return true;
-  const t = tracks[a.id] || [];
-  const hay = [a.titre, a.avec, a.label, a.ere, year(a.date), ...a.titresCles,
-    ...t.map((x) => x.titre), ...t.flatMap((x) => x.feats)].join(" ").toLowerCase();
-  return hay.includes(state.query);
+  const hay = norm([a.titre, a.avec, a.label, a.ere, year(a.date), ...a.titresCles].join(" "));
+  return hay.includes(state.query) || allTracks(a.id).some(trackHit);
 }
+
+// Morceaux qui correspondent à la recherche (toutes éditions), dans l'ordre chronologique
+function findTrackHits() {
+  if (!state.query) return [];
+  const hits = [];
+  for (const a of albums) {
+    if (!inScope(a)) continue;
+    const std = new Set((tracks[a.id] || []).map((x) => x.titre));
+    (tracks[a.id] || []).forEach((x, i) => trackHit(x) && hits.push({ a, x, n: i + 1 }));
+    // Titres présents seulement sur une autre édition (deluxe…)
+    for (const ed of editions[a.id] || []) {
+      ed.tracks.forEach((x, i) => {
+        if (std.has(x.titre) || !trackHit(x)) return;
+        std.add(x.titre);
+        hits.push({ a, x, n: i + 1, ed });
+      });
+    }
+  }
+  return hits;
+}
+
+// Entoure de <mark> la partie du texte qui correspond à la recherche
+function highlight(text) {
+  const q = state.query;
+  if (!q) return escapeHtml(text);
+  // On normalise caractère par caractère pour retrouver la position dans le texte d'origine
+  let flat = "";
+  const at = [];
+  [...text].forEach((c, i) => {
+    for (const d of norm(c)) (flat += d), at.push(i);
+  });
+  const chars = [...text];
+  const k = flat.indexOf(q);
+  if (k < 0) return escapeHtml(text);
+  const from = at[k], to = at[k + q.length - 1] + 1;
+  return escapeHtml(chars.slice(0, from).join("")) + `<mark>${escapeHtml(chars.slice(from, to).join(""))}</mark>` + escapeHtml(chars.slice(to).join(""));
+}
+
+// Listes déroulantes Année / Album
+function renderFilterOptions() {
+  const byYear = {};
+  for (const a of albums) if (state.type === "all" || a.type === state.type) byYear[year(a.date)] = (byYear[year(a.date)] || 0) + 1;
+  if (state.year && !byYear[state.year]) state.year = "";
+  $("#f-year").innerHTML =
+    `<option value="">Toutes les années</option>` +
+    Object.entries(byYear)
+      .map(([y, n]) => `<option value="${y}"${y === state.year ? " selected" : ""}>${y}${n > 1 ? ` (${n} albums)` : ""}</option>`)
+      .join("");
+
+  const list = albums.filter((a) => (state.type === "all" || a.type === state.type) && (!state.year || year(a.date) === state.year));
+  if (state.album && !list.some((a) => a.id === state.album)) state.album = "";
+  $("#f-album").innerHTML =
+    `<option value="">Tous les albums</option>` +
+    list
+      .map((a) => `<option value="${a.id}"${a.id === state.album ? " selected" : ""}>${escapeHtml(a.titre)} (${year(a.date)})</option>`)
+      .join("");
+}
+
+const HITS_SHOWN = 12;
+function renderTrackHits() {
+  const hits = findTrackHits();
+  const box = $("#track-hits");
+  box.hidden = !hits.length;
+  if (!hits.length) return;
+  $("#track-hits-n").textContent = `${hits.length} résultat${hits.length > 1 ? "s" : ""}`;
+  const shown = hitsExpanded ? hits : hits.slice(0, HITS_SHOWN);
+  $("#hit-list").innerHTML = shown
+    .map(
+      ({ a, x, n, ed }) => `
+    <li>
+      <button class="hit" data-id="${a.id}" data-titre="${escapeHtml(x.titre)}"${ed ? ` data-ed="${ed.id}"` : ""}>
+        <span class="hit-cov" style="background:${gradient(a.palette)}">${covers[a.id] ? `<img src="${covers[a.id].img}" alt="" loading="lazy">` : initials(a.titre)}</span>
+        <span class="hit-main">
+          <span class="hit-title">${highlight(x.titre)}${ed ? ` <span class="tag new">${escapeHtml(ed.nom)}</span>` : ""}</span>
+          ${x.feats.length ? `<span class="hit-feat">feat. ${x.feats.map(highlight).join(", ")}</span>` : ""}
+          <span class="hit-album">${escapeHtml(a.titre)} · ${year(a.date)} · piste ${n}</span>
+        </span>
+        <span class="hit-dur">${x.duree || ""}</span>
+      </button>
+    </li>`
+    )
+    .join("");
+  const more = $("#hit-more");
+  more.hidden = hits.length <= HITS_SHOWN;
+  more.textContent = hitsExpanded ? "Réduire la liste" : `Voir les ${hits.length - HITS_SHOWN} autres morceaux`;
+}
+
+// Met en évidence un morceau dans la tracklist de la fiche ouverte
+function focusTrack(titre) {
+  const li = [...document.querySelectorAll("#tracklist-wrap .tracklist li")].find(
+    (l) => l.querySelector(".tr-title")?.firstChild?.textContent.trim() === titre
+  );
+  if (!li) return;
+  li.classList.add("hit-row");
+  li.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+
+const filtersActive = () => state.query || state.year || state.album || state.type !== "all";
 
 const sorters = {
   "date-asc": (a, b) => a.date.localeCompare(b.date),
@@ -129,7 +237,12 @@ const sorters = {
 // ---------- Grille ----------
 function renderGrid() {
   visible = albums.filter(matches).sort(sorters[state.sort]);
-  $("#count").textContent = `${visible.length} album${visible.length > 1 ? "s" : ""}`;
+  const scope = [state.album ? "" : state.year && `en ${state.year}`, state.query && `pour « ${$("#search").value.trim()} »`].filter(Boolean).join(" ");
+  $("#count").textContent = `${visible.length} album${visible.length > 1 ? "s" : ""}${scope ? " " + scope : ""}`;
+  $("#f-reset").hidden = !filtersActive();
+  $("#f-year").classList.toggle("on", !!state.year);
+  $("#f-album").classList.toggle("on", !!state.album);
+  renderTrackHits();
 
   if (!visible.length) {
     $("#grid").innerHTML = `<p class="empty">Aucun album ne correspond à ta recherche.</p>`;
@@ -501,8 +614,16 @@ function step(delta) {
 // ---------- Événements ----------
 function bindEvents() {
   $("#search").addEventListener("input", (e) => {
-    state.query = e.target.value.trim().toLowerCase();
+    state.query = norm(e.target.value.trim());
+    hitsExpanded = false;
     renderGrid();
+  });
+  $("#search").addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && e.target.value) {
+      e.target.value = "";
+      state.query = "";
+      renderGrid();
+    }
   });
 
   document.querySelectorAll(".chip").forEach((chip) =>
@@ -510,9 +631,43 @@ function bindEvents() {
       document.querySelectorAll(".chip").forEach((c) => c.classList.remove("active"));
       chip.classList.add("active");
       state.type = chip.dataset.type;
+      renderFilterOptions();
       renderGrid();
     })
   );
+
+  $("#f-year").addEventListener("change", (e) => {
+    state.year = e.target.value;
+    renderFilterOptions();
+    renderGrid();
+  });
+  $("#f-album").addEventListener("change", (e) => {
+    state.album = e.target.value;
+    renderGrid();
+  });
+
+  $("#f-reset").addEventListener("click", () => {
+    Object.assign(state, { type: "all", query: "", year: "", album: "" });
+    $("#search").value = "";
+    document.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c.dataset.type === "all"));
+    hitsExpanded = false;
+    renderFilterOptions();
+    renderGrid();
+  });
+
+  $("#hit-more").addEventListener("click", () => {
+    hitsExpanded = !hitsExpanded;
+    renderTrackHits();
+  });
+
+  // Clic sur un morceau trouvé : ouvre la fiche de l'album sur la bonne édition et surligne le titre
+  $("#hit-list").addEventListener("click", (e) => {
+    const b = e.target.closest(".hit");
+    if (!b) return;
+    editionChoice[b.dataset.id] = b.dataset.ed || "standard";
+    openAlbum(b.dataset.id);
+    requestAnimationFrame(() => focusTrack(b.dataset.titre));
+  });
 
   $("#sort").addEventListener("change", (e) => {
     state.sort = e.target.value;
@@ -524,7 +679,10 @@ function bindEvents() {
     const f = e.target.closest(".feat");
     if (!f) return;
     $("#search").value = f.dataset.feat;
-    state.query = f.dataset.feat.toLowerCase();
+    state.query = norm(f.dataset.feat);
+    state.year = state.album = ""; // on cherche l'invité dans toute la discographie
+    hitsExpanded = false;
+    renderFilterOptions();
     $("#modal").close();
     window.showTab?.("disco"); // la fiche peut avoir été ouverte depuis un jeu
     document.querySelector(".controls").scrollIntoView({ behavior: "smooth" });
@@ -588,6 +746,7 @@ function bindEvents() {
 // ---------- Init ----------
 renderStats();
 renderTimeline();
+renderFilterOptions();
 renderGrid();
 renderStatsSection();
 bindEvents();
@@ -605,7 +764,7 @@ if (window.Covers) {
     }
     if ($("#modal").open && visible[current]?.id === id) renderModal();
     clearTimeout(window.__tblTimer);
-    window.__tblTimer = setTimeout(renderStatsTable, 300);
+    window.__tblTimer = setTimeout(() => (renderStatsTable(), renderTrackHits()), 300);
     document.dispatchEvent(new CustomEvent("cover-loaded", { detail: id }));
   });
 }
