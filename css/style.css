@@ -1077,6 +1077,18 @@ dialog::backdrop { background: rgba(0,0,0,.7); backdrop-filter: blur(3px); }
 .tag.new { color: var(--ok-text); border-color: var(--ok-line); }
 .tag.hot { color: var(--ok-text); border-color: var(--ok-line); }
 .tr-gain { color: var(--ok-text); font-weight: 600; }
+
+/* Écoute de l'album à la suite */
+.queue-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 4px 0 10px; }
+.queue-btn, .queue-next {
+  font: inherit; font-weight: 600; font-size: .88rem; cursor: pointer; color: var(--text);
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px;
+}
+.queue-btn:hover, .queue-next:hover, .queue-btn:focus-visible, .queue-next:focus-visible { border-color: var(--accent); outline: none; }
+.queue-btn.on { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.queue-pos { font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tracklist li.playing { background: var(--accent-soft); }
+.tracklist li.playing .tr-title { color: var(--accent); }
 .tr-streams { flex-wrap: wrap; row-gap: 4px; white-space: nowrap; } /* sur mobile, les badges passent à la ligne entiers */
 .tr-change { color: var(--ok-text); }
 .ed-picker { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 10px; }

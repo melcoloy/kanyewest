@@ -17,7 +17,8 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
 - **Plus fortes hausses** : les 10 morceaux qui ont gagné le plus de streams depuis le relevé précédent, en nombre ou en %, clic = la fiche sur le bon titre
 - **Volume des extraits** : bouton 🔊 dans la barre d'onglets (curseur + couper le son), réglage gardé d'une visite à l'autre
 - **Mode clair / sombre** : suit le réglage du système, bouton ☀ / ☾ pour forcer l'un ou l'autre
-- **Fiches album** : ▶ sur chaque numéro de la tracklist pour écouter un extrait, et courbe des streams Spotify
+- **Fiches album** : ▶ sur chaque numéro de la tracklist pour écouter un extrait, et courbe des streams Spotify ;
+  « Écouter les extraits à la suite » enchaîne les extraits de tout l'album (depuis le titre sélectionné s'il y en a un)
 - **Onglets** (lien direct possible : `#comparer`, `#samples`, `#invites`, `#classement`, `#defi`, `#jeux/…`) :
   - **Comparer** : deux albums côte à côte, le meilleur chiffre de chaque ligne mis en valeur
   - **Samples** : les morceaux d'origine qu'il a samplés, à écouter côte à côte avec sa version

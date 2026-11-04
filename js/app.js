@@ -764,6 +764,15 @@ function renderTracklist(a) {
   return `<div id="tracklist-wrap">
     <h3>Tracklist <span class="h3-meta">${t.length} titres${total}${nbFeats ? ` · ${nbFeats} invités` : ""}${a.id === "donda-2" ? "" : " · clique sur un numéro pour écouter un extrait"}</span></h3>
     ${picker}
+    ${
+      a.id === "donda-2"
+        ? ""
+        : `<div class="queue-bar">
+        <button class="queue-btn" id="queue-btn" type="button">▶ Écouter les extraits à la suite</button>
+        <button class="queue-next" id="queue-next" type="button" hidden>Suivant ⏭</button>
+        <span class="queue-pos" id="queue-pos" aria-live="polite"></span>
+      </div>`
+    }
     <ol class="tracklist">
       ${t
         .map(
@@ -807,6 +816,46 @@ function renderTracklist(a) {
     }.</p>` : ""}
     ${note ? `<p class="tr-note">ⓘ ${escapeHtml(note)}</p>` : ""}
   </div>`;
+}
+
+// ---------- Écoute de l'album à la suite (extraits de 30 s) ----------
+let queue = null; // { i: index du morceau, token } ; token : ignore les rappels d'un extrait déjà remplacé
+const queueButtons = () => [...document.querySelectorAll("#tracklist-wrap .tr-play")];
+
+function playQueueAt(i) {
+  const btns = queueButtons();
+  while (i < btns.length && btns[i].disabled) i++; // extrait déjà connu comme introuvable
+  if (!queue || i >= btns.length) {
+    queue = null;
+    return syncQueue();
+  }
+  const token = ++queue.token;
+  queue.i = i;
+  const b = btns[i];
+  const a = visible[current];
+  syncQueue();
+  b.closest("li").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  MiniPlayer.toggle(b, () => Previews.ye({ titre: b.dataset.titre, albumId: a.id }), {
+    onEnd: (reason) => {
+      if (!queue || queue.token !== token) return;
+      if (reason === "stopped") {
+        queue = null;
+        return syncQueue();
+      }
+      playQueueAt(i + 1); // fini ou introuvable : morceau suivant
+    },
+  });
+}
+
+function syncQueue() {
+  const btn = $("#queue-btn");
+  if (!btn) return;
+  const n = queueButtons().length;
+  btn.textContent = queue ? "■ Arrêter l'écoute" : "▶ Écouter les extraits à la suite";
+  btn.classList.toggle("on", !!queue);
+  $("#queue-next").hidden = !queue || queue.i >= n - 1;
+  $("#queue-pos").textContent = queue ? `Extrait ${queue.i + 1} / ${n}` : "";
+  document.querySelectorAll("#tracklist-wrap .tracklist li").forEach((li, k) => li.classList.toggle("playing", !!queue && k === queue.i));
 }
 
 function step(delta) {
@@ -977,7 +1026,21 @@ function bindEvents() {
     const b = e.target.closest(".tr-play");
     if (!b) return;
     const a = visible[current];
+    // Pendant l'écoute à la suite, un autre numéro = on continue à partir de ce morceau
+    const k = queueButtons().indexOf(b);
+    if (queue && k !== queue.i) return playQueueAt(k);
     MiniPlayer.toggle(b, () => Previews.ye({ titre: b.dataset.titre, albumId: a.id }));
+  });
+
+  // Écouter à la suite : depuis le morceau sélectionné s'il y en a un, sinon depuis le début
+  $("#modal").addEventListener("click", (e) => {
+    if (e.target.closest("#queue-btn")) {
+      if (queue) return MiniPlayer.stop(); // le rappel « stopped » remet le bouton à zéro
+      const sel = [...document.querySelectorAll("#tracklist-wrap .tracklist li")].findIndex((li) => li.classList.contains("hit-row"));
+      queue = { i: 0, token: 0 };
+      return playQueueAt(Math.max(0, sel));
+    }
+    if (e.target.closest("#queue-next") && queue) playQueueAt(queue.i + 1);
   });
 
   document.addEventListener("keydown", (e) => {
@@ -1033,7 +1096,7 @@ if (window.Covers) {
       img.src = data.img;
       card.prepend(img);
     }
-    if ($("#modal").open && visible[current]?.id === id) {
+    if ($("#modal").open && visible[current]?.id === id && !queue) { // pas pendant l'écoute à la suite
       renderModal();
       if (linkTrack) focusTrack(linkTrack, { scroll: false }); // la tracklist vient d'être redessinée
     }
