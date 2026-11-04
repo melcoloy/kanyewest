@@ -2,6 +2,8 @@
 
 Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discographie studio de Kanye West / Ye :
 
+- **Ce jour-là** : bandeau quand un album fête sa sortie (aujourd'hui, ces derniers jours, ou le prochain anniversaire) ;
+  pour tester une autre date : `index.html?jour=2026-11-22`
 - **Frise chronologique** cliquable de 2004 à 2026
 - **Pochettes** chargées automatiquement (API iTunes Search), ou tes propres images
 - **Liens d'écoute** : Spotify, Apple Music, Deezer, YouTube Music

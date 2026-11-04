@@ -85,6 +85,66 @@ function renderStats() {
     .join("");
 }
 
+// ---------- Ce jour-là : anniversaires de sortie ----------
+// Aujourd'hui → « il y a N ans jour pour jour » ; 1 à 3 jours après → « fêtait » ; sinon le prochain.
+// Pour tester une autre date : index.html?jour=2026-11-22
+const ANNIV_PAST_DAYS = 3;
+function todayKey() {
+  const q = new URLSearchParams(location.search).get("jour");
+  if (/^\d{4}-\d{2}-\d{2}$/.test(q || "")) return q;
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+const dayNum = (iso) => Math.round(Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) / 864e5);
+
+function anniversaries(today = todayKey()) {
+  const y = +today.slice(0, 4);
+  return albums
+    .map((a) => {
+      // Anniversaire de cette année, ou de l'an prochain s'il est passé depuis plus de 3 jours
+      let ay = y;
+      let days = dayNum(`${ay}${a.date.slice(4)}`) - dayNum(today);
+      if (days < -ANNIV_PAST_DAYS) days = dayNum(`${++ay}${a.date.slice(4)}`) - dayNum(today);
+      return { a, days, age: ay - +a.date.slice(0, 4) };
+    })
+    .filter((x) => x.age > 0)
+    .sort((x, y) => x.days - y.days);
+}
+
+function renderAnniv() {
+  const box = $("#anniv");
+  if (!box) return;
+  const list = anniversaries();
+  // Priorité : aujourd'hui, puis les jours qui viennent de passer, puis le prochain
+  const pick = list.filter((x) => x.days === 0).length ? list.filter((x) => x.days === 0)
+    : list.filter((x) => x.days < 0).length ? [list.filter((x) => x.days < 0).at(-1)]
+    : [list.find((x) => x.days > 0)];
+  if (!pick[0]) return (box.innerHTML = "");
+  const ans = (n) => `${n} an${n > 1 ? "s" : ""}`;
+  const jours = (n) => `${n} jour${n > 1 ? "s" : ""}`;
+  box.innerHTML = pick
+    .map(({ a, days, age }) => {
+      const t = `<i>${escapeHtml(a.titre)}</i>`;
+      const kicker = days === 0 ? "Ce jour-là" : days < 0 ? "Cette semaine" : "Prochain anniversaire";
+      const text =
+        days === 0 ? `Il y a ${ans(age)} jour pour jour sortait ${t}.`
+        : days < 0 ? `${days === -1 ? "Hier" : `Il y a ${jours(-days)}`}, ${t} fêtait ses ${ans(age)}.`
+        : `${days === 1 ? "Demain" : `Dans ${jours(days)}`}, ${t} fêtera ses ${ans(age)}.`;
+      const round = age % 5 === 0;
+      return `
+    <button class="anniv${days === 0 ? " today" : ""}${round ? " round" : ""}" data-id="${a.id}">
+      <span class="hit-cov" style="background:${gradient(a.palette)}">${covers[a.id] ? `<img src="${covers[a.id].img}" alt="">` : initials(a.titre)}</span>
+      <span class="anniv-main">
+        <span class="anniv-kicker">${days === 0 || round ? "🎂 " : ""}${kicker}</span>
+        <span class="anniv-text">${text}</span>
+        <span class="anniv-date">Sorti le ${fmtDate(a.date)}</span>
+      </span>
+      <span class="anniv-go" aria-hidden="true">→</span>
+    </button>`;
+    })
+    .join("");
+}
+
 // ---------- Frise chronologique ----------
 function renderTimeline() {
   const start = new Date(albums[0].date).getTime();
@@ -849,7 +909,7 @@ function bindEvents() {
       statsState.key = k;
       return renderStatsTable();
     }
-    const el = e.target.closest(".card, .tl-dot, .fw-row, #stats-table tr[data-id], #singles li[data-id], #sp-songs li[data-id]");
+    const el = e.target.closest(".card, .tl-dot, .fw-row, .anniv, #stats-table tr[data-id], #singles li[data-id], #sp-songs li[data-id]");
     if (el) openAlbum(el.dataset.id);
   });
 
@@ -918,6 +978,7 @@ function bindEvents() {
 
 // ---------- Init ----------
 window.addEventListener("DOMContentLoaded", openFromHash);
+renderAnniv();
 renderStats();
 renderTimeline();
 renderFilterOptions();
@@ -950,6 +1011,7 @@ if (window.Covers) {
   Covers.loadAll(albums, (id, data) => {
     covers[id] = data;
     setWallCover(id, data.img);
+    if (document.querySelector(`.anniv[data-id="${id}"]`)) renderAnniv();
     const card = document.querySelector(`.card[data-id="${id}"] .cover`);
     if (card && !card.classList.contains("has-img")) {
       const img = new Image();

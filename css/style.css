@@ -223,6 +223,27 @@ html { scrollbar-color: var(--line-strong) var(--bg); }
 #stats-title { scroll-margin-top: 64px; }
 html { scroll-behavior: smooth; }
 
+/* Ce jour-là */
+#anniv { display: grid; gap: 8px; margin-bottom: 14px; }
+#anniv:empty { display: none; }
+.anniv {
+  display: flex; align-items: center; gap: 14px; width: 100%; padding: 10px 16px 10px 10px;
+  background: linear-gradient(100deg, var(--accent-soft), transparent 70%), var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+  transition: border-color .2s, transform .2s;
+}
+.anniv:hover, .anniv:focus-visible { border-color: var(--accent); outline: none; }
+.anniv.today, .anniv.round { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.anniv .hit-cov { flex-basis: 52px; width: 52px; height: 52px; }
+.anniv-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.anniv-kicker { font-size: .72rem; text-transform: uppercase; letter-spacing: .12em; color: var(--accent); font-weight: 600; }
+.anniv-text { font-weight: 500; }
+.anniv-text i { font-style: normal; font-weight: 700; }
+.anniv-date { font-size: .8rem; color: var(--muted); }
+.anniv-go { color: var(--muted); font-size: 1.2rem; transition: transform .2s, color .2s; }
+.anniv:hover .anniv-go { color: var(--accent); transform: translateX(3px); }
+
 .stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
