@@ -37,6 +37,7 @@ const SHELL = [
   "js/blindtest.js",
   "js/samples.js",
   "js/tierlist.js",
+  "js/progress.js",
   "js/quicksearch.js",
   "js/theme.js",
   "js/tabs.js",

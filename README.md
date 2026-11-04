@@ -38,6 +38,8 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
     - *Devine l'année* : place un morceau sur la frise 2004 → aujourd'hui
     - *Plus ou moins* : quel morceau a le plus de streams Spotify ?
     - *Qui est l'invité ?* : trouve l'artiste en featuring parmi 4 (2 pts sans écouter, 1 pt après l'extrait)
+    - *Ma progression* : records de chaque jeu, série du défi du jour, 18 badges à débloquer (notification au déblocage) ;
+      tout reste dans le navigateur
 - **Installable (PWA)** : « Installer l'application » dans le navigateur ; la discographie reste consultable hors ligne
 - **Aperçu de lien** : image et titre quand le lien est partagé (WhatsApp, Discord…)
 - **Streams mis à jour automatiquement** chaque lundi par GitHub Actions, avec historique pour les courbes (voir plus bas)
@@ -74,6 +76,7 @@ kanyewest/
 │   ├── invites.js         ← graphe des invités
 │   ├── samples.js         ← page Samples
 │   ├── tierlist.js        ← Mon classement (albums, morceaux, partage, top global)
+│   ├── progress.js        ← Ma progression (records, badges)
 │   ├── quicksearch.js     ← recherche rapide (/ ou Ctrl + K)
 │   ├── theme.js           ← mode clair / sombre
 │   └── tabs.js            ← navigation entre les onglets

@@ -146,6 +146,7 @@
     function end() {
       const record = game.score > best;
       if (record) store.set(BEST, (best = game.score));
+      window.Progress?.check();
       root.innerHTML = `
         <div class="bt-end">
           <p class="g-over-title">${record && game.score ? "Nouveau record !" : "Partie terminée"}</p>
@@ -294,6 +295,7 @@
       MiniPlayer.stop();
       const record = game.score > best;
       if (record) store.set(BEST, (best = game.score));
+      window.Progress?.check();
       root.innerHTML = `
         <div class="bt-end">
           <p class="g-over-title">${record && game.score ? "Nouveau record !" : "Partie terminée"}</p>

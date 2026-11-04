@@ -142,6 +142,7 @@
     MiniPlayer.stop();
     const record = game.score > best;
     if (record) store.set(BEST, (best = game.score));
+    window.Progress?.check();
     const max = game.list.length * 2;
     root.innerHTML = `
       <div class="bt-end">

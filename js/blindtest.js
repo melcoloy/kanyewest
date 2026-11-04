@@ -574,6 +574,7 @@
         const d = defi();
         d.jours[game.day] = { score: game.score, manches };
         store.set(DEFI_KEY, d);
+        window.Progress?.check();
         game = null;
         return renderDailyIntro();
       }
@@ -602,6 +603,7 @@
       if (record) {
         best[key] = game.score;
         store.set(BEST_KEY, best);
+        window.Progress?.check();
       }
       endShare = ShareResult.text({
         jeu,

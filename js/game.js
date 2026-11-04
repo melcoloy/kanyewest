@@ -136,6 +136,7 @@
         if (record) {
           best = score;
           try { localStorage.setItem(BEST_KEY, String(best)); } catch {}
+          window.Progress?.check();
         }
         root.insertAdjacentHTML(
           "beforeend",

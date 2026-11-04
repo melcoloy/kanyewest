@@ -52,7 +52,10 @@
     return st;
   }
   let state = load();
-  const save = () => { try { localStorage.setItem(KEY(), JSON.stringify(state)); } catch {} };
+  const save = () => {
+    try { localStorage.setItem(KEY(), JSON.stringify(state)); } catch {}
+    window.Progress?.check(); // badges « Critique » et « Puriste »
+  };
   // Nombre de morceaux déjà classés pour un album (affiché dans le menu)
   function progress(id) {
     try {

@@ -67,6 +67,7 @@ async function run(browser, base, label, viewport) {
   check(await exists("#anniv .anniv"), "Bandeau « Ce jour-là » affiché");
   check(await exists("#timeline .tl-dot"), "Frise chronologique affichée");
   check(await exists("#sp-songs li"), "Stats Spotify affichées");
+  check(await exists("#gains li"), "Plus fortes hausses affichées");
   await page.fill("#search", "jay");
   await page.waitForTimeout(150);
   check(await exists("#hit-list .hit"), "Recherche « jay » : des morceaux trouvés");
@@ -113,6 +114,7 @@ async function run(browser, base, label, viewport) {
     ["invite", "#quiz-invites", '#quiz-invites [data-act="start"]', "#quiz-invites [data-pick]"],
     ["plus-ou-moins", "#game", null, "#game [data-guess]"],
     ["pochette", "#pixel", null, null], // sans pochettes (hors ligne), le jeu reste sur son écran d'accueil
+    ["progression", "#progression", null, null], // records et badges
   ];
   for (const [sub, root, start, answer] of games) {
     try {

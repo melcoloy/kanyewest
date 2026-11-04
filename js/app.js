@@ -653,6 +653,7 @@ function openAlbum(id) {
   renderModal();
   if (!$("#modal").open) $("#modal").showModal();
   setAlbumHash();
+  window.Progress?.seen(id);
 }
 
 // ---------- Liens directs : #album/<id> ou #album/<id>/<titre du morceau> ----------
@@ -874,6 +875,7 @@ function playQueueAt(i) {
   const btns = queueButtons();
   while (i < btns.length && btns[i].disabled) i++; // extrait déjà connu comme introuvable
   if (!queue || i >= btns.length) {
+    if (queue) window.Progress?.queueDone(); // arrivé au bout de l'album
     queue = null;
     return syncQueue();
   }
@@ -918,6 +920,7 @@ function step(delta) {
   current = n;
   renderModal();
   setAlbumHash();
+  window.Progress?.seen(visible[current].id);
 }
 
 // ---------- Événements ----------
