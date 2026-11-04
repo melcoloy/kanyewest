@@ -55,8 +55,20 @@
     const bar = document.querySelector(".tabs");
     if (tabChanged && window.scrollY > bar.offsetTop) window.scrollTo({ top: bar.offsetTop, behavior: "instant" });
 
+    setPageTitle();
     document.dispatchEvent(new CustomEvent("tab-change", { detail: view() }));
   }
+
+  // Titre de l'onglet du navigateur : « Kanye West · Discographie », « Samples · Kanye West »,
+  // « Blind test · Kanye West »… ou le nom de l'album quand une fiche est ouverte.
+  const BASE_TITLE = "Kanye West · Discographie";
+  function setPageTitle(extra) {
+    let label = extra;
+    if (!label && currentTab === "jeux") label = document.querySelector(`.subtab[data-sub="${currentSub}"] b`)?.textContent;
+    else if (!label && currentTab !== "disco") label = tabs[names.indexOf(currentTab)]?.textContent.trim();
+    document.title = label ? `${label} · Kanye West` : BASE_TITLE;
+  }
+  window.setPageTitle = setPageTitle;
 
   const fromHash = () => {
     let h = decodeURIComponent(location.hash.slice(1));
@@ -71,6 +83,7 @@
   // Flèches gauche / droite dans la barre d'onglets
   document.querySelector(".tabs").addEventListener("keydown", (e) => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    if (e.target.closest(".vol")) return; // les flèches servent au curseur de volume
     const i = names.indexOf(currentTab) + (e.key === "ArrowRight" ? 1 : -1);
     show(names[(i + names.length) % names.length], "", { push: true, focus: true });
   });

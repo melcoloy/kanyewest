@@ -26,6 +26,7 @@ const SHELL = [
   "js/covers.js",
   "js/app.js",
   "js/previews.js",
+  "js/volume.js",
   "js/player.js",
   "js/game.js",
   "js/jeux.js",

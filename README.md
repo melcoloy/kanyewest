@@ -11,6 +11,7 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
 - **Fiche détaillée** par album : date, label, place au Billboard 200, titres clés, distinctions, lien Apple Music — navigation avec ← →
 - **Graphique** de la longueur des albums
 - **Plus fortes hausses** : les 10 morceaux qui ont gagné le plus de streams depuis le relevé précédent, en nombre ou en %, clic = la fiche sur le bon titre
+- **Volume des extraits** : bouton 🔊 dans la barre d'onglets (curseur + couper le son), réglage gardé d'une visite à l'autre
 - **Mode clair / sombre** : suit le réglage du système, bouton ☀ / ☾ pour forcer l'un ou l'autre
 - **Fiches album** : ▶ sur chaque numéro de la tracklist pour écouter un extrait, et courbe des streams Spotify
 - **Onglets** (lien direct possible : `#comparer`, `#samples`, `#invites`, `#classement`, `#defi`, `#jeux/…`) :
@@ -50,6 +51,7 @@ kanyewest/
 │   ├── app.js             ← affichage, filtres, fiche album, stats, courbes
 │   ├── covers.js          ← chargement des pochettes (API iTunes)
 │   ├── previews.js        ← recherche des extraits audio (API iTunes)
+│   ├── volume.js          ← volume des extraits (bouton 🔊 de la barre d'onglets)
 │   ├── player.js          ← mini-lecteur d'extraits (fiches, samples, devine l'année)
 │   ├── blindtest.js       ← blind test (solo, chrono, duel) + défi du jour
 │   ├── jeux.js            ← pochette floue + devine l'année

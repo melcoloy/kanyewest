@@ -554,6 +554,7 @@ function openAlbum(id) {
 function renderModal() {
   window.MiniPlayer?.stop(); // on change d'album : on coupe l'extrait en cours
   const a = visible[current];
+  window.setPageTitle?.(a.titre);
   const facts = [
     ["Sortie", fmtDate(a.date)],
     ["Label", a.label],
@@ -803,6 +804,7 @@ function bindEvents() {
   // Quand on ferme, on coupe l'extrait et on remet la liste filtrée
   $("#modal").addEventListener("close", () => {
     window.MiniPlayer?.stop();
+    window.setPageTitle?.();
     renderGrid();
   });
 

@@ -8,6 +8,7 @@
 
 window.MiniPlayer = (() => {
   const audio = new Audio();
+  window.Volume?.register(audio);
   const SILENCE = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
   let current = null;
 
