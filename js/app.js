@@ -408,7 +408,7 @@ function renderFirstWeek() {
       const v = S.albums[a.id].premiereSemaine;
       const streaming = +year(a.date) >= 2015;
       return `
-      <button class="fw-row" data-id="${a.id}" aria-label="${escapeHtml(a.titre)} : ${fmtNb(v)} unités">
+      <button class="fw-row" data-id="${a.id}">
         <span class="fw-name">${escapeHtml(a.titre)} <span class="fw-year">${year(a.date)}</span></span>
         <span class="fw-track">
           <span class="fw-bar${streaming ? " streaming" : ""}${a.id === record.id ? " record" : ""}" style="width:${(v / max) * 100}%"></span>
@@ -823,7 +823,7 @@ function renderTracklist(a) {
           ${
             a.id === "donda-2" // la version Stem Player n'est pas sur les plateformes
               ? `<span class="tr-num">${i + 1}</span>`
-              : `<button class="tr-num tr-play" data-i="${i}" data-titre="${escapeHtml(x.titre)}" data-label="${i + 1}" data-state="idle" aria-label="Écouter un extrait">${i + 1}</button>`
+              : `<button class="tr-num tr-play" data-i="${i}" data-titre="${escapeHtml(x.titre)}" data-label="${i + 1}" data-state="idle" aria-label="${i + 1}. Écouter un extrait : ${escapeHtml(x.titre)}">${i + 1}</button>`
           }
           <span class="tr-title">${escapeHtml(x.titre)}${
             ed?.nouveaux.includes(x.titre) ? ' <span class="tag new">nouveau</span>' : ""

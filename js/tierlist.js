@@ -176,14 +176,15 @@
   const tile = (id) => {
     if (!isAlbums()) {
       const n = allTracks(scope).findIndex((t) => t.titre === id) + 1;
-      return `<button class="tl-tile tl-chip${selected === id ? " selected" : ""}" data-id="${escapeHtml(id)}" aria-label="${escapeHtml(id)}">
+      return `<button class="tl-tile tl-chip${selected === id ? " selected" : ""}" data-id="${escapeHtml(id)}" aria-label="${n}. ${escapeHtml(id)}">
         <span class="tl-num">${n}</span>${escapeHtml(id)}
       </button>`;
     }
     const a = byId[id];
     const img = covers[id]?.img;
-    return `<button class="tl-tile${selected === id ? " selected" : ""}" data-id="${id}" title="${escapeHtml(a.titre)} (${a.date.slice(0, 4)})" aria-label="${escapeHtml(a.titre)}" style="background:${gradient(a.palette)}">
-      ${img ? `<img src="${img}" alt="" draggable="false">` : `<span>${initials(a.titre)}</span>`}
+    return `<button class="tl-tile${selected === id ? " selected" : ""}" data-id="${id}" title="${escapeHtml(a.titre)} (${a.date.slice(0, 4)})" style="background:${gradient(a.palette)}">
+      ${img ? `<img src="${img}" alt="" draggable="false">` : `<span aria-hidden="true">${initials(a.titre)}</span>`}
+      <span class="visually-hidden">${escapeHtml(a.titre)}</span>
     </button>`;
   };
 
@@ -222,12 +223,12 @@
         ${TIERS.map(
           (t) => `<div class="tl-row">
             <div class="tl-label" style="background:${t.color}">${t.id}</div>
-            <div class="tl-zone" data-zone="${t.id}" aria-label="Rang ${t.id}">${state[t.id].map(tile).join("")}</div>
+            <div class="tl-zone" data-zone="${t.id}" role="group" aria-label="Rang ${t.id}">${state[t.id].map(tile).join("")}</div>
           </div>`
         ).join("")}
       </div>
       <p class="bt-label tl-pool-label">À classer</p>
-      <div class="tl-zone tl-pool" data-zone="pool" aria-label="À classer">${state.pool.map(tile).join("") || `<span class="muted tl-done">Tous les ${what} sont classés 🎉</span>`}</div>`}`;
+      <div class="tl-zone tl-pool" data-zone="pool" role="group" aria-label="À classer">${state.pool.map(tile).join("") || `<span class="muted tl-done">Tous les ${what} sont classés 🎉</span>`}</div>`}`;
     root.querySelector("#tl-scope").addEventListener("change", (e) => {
       scope = e.target.value;
       try { localStorage.setItem(SCOPE_KEY, scope); } catch {}

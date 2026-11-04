@@ -85,7 +85,7 @@
     const match = (g) => q && g.name.toLowerCase().includes(q);
 
     const svg = `
-      <svg class="gv-svg${sel ? " has-sel" : ""}" viewBox="-130 -10 ${W + 260} ${W + 20}" role="img" aria-label="Graphe des invités de Ye">
+      <svg class="gv-svg${sel ? " has-sel" : ""}" viewBox="-130 -10 ${W + 260} ${W + 20}" role="group" aria-label="Graphe des invités de Ye">
         ${RADII.slice(0, state.min === 1 ? 4 : 3).map((r) => `<circle class="gv-ring" cx="${C}" cy="${C}" r="${r}"/>`).join("")}
         ${nodes.map((g) => `<line class="gv-spoke${sel === g ? " on" : ""}" x1="${C}" y1="${C}" x2="${g.x.toFixed(1)}" y2="${g.y.toFixed(1)}"/>`).join("")}
         ${pairEdges

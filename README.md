@@ -138,8 +138,10 @@ Les avertissements (`!`) signalent un détail à vérifier sans bloquer.
 Le même workflow (*Vérifications*) teste aussi le site dans un vrai navigateur : `scripts/smoke_test.js` l'ouvre
 dans Chromium et passe sur tous les onglets, les jeux, les fiches album, les liens directs et la recherche rapide,
 sur ordinateur et sur mobile. Il échoue à la moindre erreur JavaScript, si un élément attendu manque ou si la page
-déborde sur le côté. Les pochettes et extraits d'Apple sont coupés pendant le test (résultat identique à chaque fois).
-En local : `npm install --no-save playwright && npx playwright install chromium`, puis `node scripts/smoke_test.js`.
+déborde sur le côté. Il vérifie aussi l'**accessibilité** de chaque vue, en thème sombre et clair, avec axe-core
+(règles WCAG 2.1 A et AA : contrastes, noms des boutons, rôles…). Les pochettes et extraits d'Apple sont coupés
+pendant le test (résultat identique à chaque fois).
+En local : `npm install --no-save playwright axe-core && npx playwright install chromium`, puis `node scripts/smoke_test.js`.
 
 ## Aperçu de lien
 

@@ -3,7 +3,8 @@
 #     (en local : node scripts/check_data.js)
 #   - Site : ouvre le site dans Chromium, passe sur tous les onglets, jeux, fiches, liens directs
 #     et la recherche rapide, sur ordinateur et sur mobile ; échoue à la moindre erreur JavaScript
-#     (en local : npm install --no-save playwright && npx playwright install chromium,
+#     et vérifie l'accessibilité de chaque vue avec axe-core (contrastes, noms des boutons, rôles…)
+#     (en local : npm install --no-save playwright axe-core && npx playwright install chromium,
 #      puis node scripts/smoke_test.js)
 # En cas de croix rouge, le détail est dans le journal de l'étape qui a échoué.
 name: Vérifications
@@ -40,9 +41,9 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Installer Playwright et Chromium
+      - name: Installer Playwright, axe-core et Chromium
         run: |
-          npm install --no-save --no-package-lock playwright@1.63.0
+          npm install --no-save --no-package-lock playwright@1.63.0 axe-core@4.14.0
           npx playwright install --with-deps chromium
 
       - name: Tester le site

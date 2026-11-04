@@ -54,8 +54,9 @@
     const options = (sel) => albums.map((x) => `<option value="${x.id}"${x.id === sel ? " selected" : ""}>${escapeHtml(x.titre)} (${x.date.slice(0, 4)})</option>`).join("");
     const head = (x, i) => `
       <div class="cmp-head">
-        <button class="cmp-cov" data-album="${x.id}" style="background:${gradient(x.palette)}" aria-label="Ouvrir ${escapeHtml(x.titre)}">
-          ${covers[x.id]?.img ? `<img src="${covers[x.id].img}" alt="">` : `<span>${initials(x.titre)}</span>`}
+        <button class="cmp-cov" data-album="${x.id}" style="background:${gradient(x.palette)}">
+          ${covers[x.id]?.img ? `<img src="${covers[x.id].img}" alt="">` : `<span aria-hidden="true">${initials(x.titre)}</span>`}
+          <span class="visually-hidden">Ouvrir ${escapeHtml(x.titre)}</span>
         </button>
         <select class="cmp-select" data-side="${i}" aria-label="Album ${i + 1}">${options(x.id)}</select>
       </div>`;
