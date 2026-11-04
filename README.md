@@ -16,7 +16,9 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
 - **Liens directs** : `#album/graduation` ouvre la fiche, `#album/graduation/Stronger` la fiche avec le morceau surligné ;
   bouton « Partager » dans chaque fiche, clic sur un titre de la tracklist pour l'ajouter au lien
 - **Graphique** de la longueur des albums
-- **Plus fortes hausses** : les 10 morceaux qui ont gagné le plus de streams depuis le relevé précédent, en nombre ou en %, clic = la fiche sur le bon titre
+- **Plus fortes hausses** : les 10 morceaux qui ont gagné le plus de streams sur la semaine, le mois ou depuis le début du suivi
+  (au fil des relevés), en nombre ou en %, clic = la fiche sur le bon titre
+- **Courbe de chaque morceau** : clic sur un titre dans une fiche album = ses streams relevé après relevé
 - **Volume des extraits** : bouton 🔊 dans la barre d'onglets (curseur + couper le son), réglage gardé d'une visite à l'autre
 - **Mode clair / sombre** : suit le réglage du système, bouton ☀ / ☾ pour forcer l'un ou l'autre
 - **Fiches album** : ▶ sur chaque numéro de la tracklist pour écouter un extrait, et courbe des streams Spotify ;
@@ -81,7 +83,7 @@ kanyewest/
 │   ├── tracklists.js      ← tracklists : "Titre | Invités | Durée"
 │   ├── stats.js           ← ventes, certifications, streams des albums
 │   ├── track-streams.js   ← streams Spotify par morceau
-│   ├── track-streams-prev.js ← relevé précédent (écrit par le script, sert aux « Plus fortes hausses »)
+│   ├── track-history.js   ← historique des streams de chaque morceau (une colonne par lundi, écrit par le script)
 │   ├── history.js         ← historique des streams (une ligne par lundi)
 │   └── samples.js         ← liste des samples
 ├── scripts/update_streams.py           ← mise à jour des streams depuis kworb.net
@@ -112,7 +114,7 @@ Pour un lien direct : `liens: { spotify: "https://open.spotify.com/album/…" }`
 
 Chaque lundi matin, GitHub Actions lance `scripts/update_streams.py`, qui lit les pages kworb.net de Kanye,
 met à jour `data/track-streams.js` et `data/stats.js`, ajoute une ligne à `data/history.js` (les courbes),
-copie l'ancien relevé des morceaux dans `data/track-streams-prev.js` (les « Plus fortes hausses »),
+ajoute une colonne à `data/track-history.js` (historique de chaque morceau : hausses et courbes),
 puis commite le résultat.
 
 - Lancement manuel : onglet **Actions** du dépôt → *Mise à jour des streams* → *Run workflow*.

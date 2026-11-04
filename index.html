@@ -165,9 +165,12 @@
             <h3>Plus fortes hausses</h3>
             <p class="muted panel-sub" id="gains-sub"></p>
           </div>
-          <div class="ed-picker" role="group" aria-label="Classer les hausses">
-            <button class="ed-btn active" data-gains="abs" aria-pressed="true">En streams</button>
-            <button class="ed-btn" data-gains="pct" aria-pressed="false">En %</button>
+          <div class="gains-pickers">
+            <div class="ed-picker" id="gains-period" role="group" aria-label="Période" hidden></div>
+            <div class="ed-picker" id="gains-mode" role="group" aria-label="Classer les hausses">
+              <button class="ed-btn active" data-gains="abs" aria-pressed="true">En streams</button>
+              <button class="ed-btn" data-gains="pct" aria-pressed="false">En %</button>
+            </div>
           </div>
         </div>
         <ol class="gains" id="gains"></ol>
@@ -300,7 +303,7 @@
   <script src="data/tracklists.js"></script>
   <script src="data/stats.js"></script>
   <script src="data/track-streams.js"></script>
-  <script src="data/track-streams-prev.js"></script>
+  <script src="data/track-history.js"></script>
   <script src="data/samples.js"></script>
   <script src="data/history.js"></script>
   <script src="js/covers.js"></script>

@@ -21,7 +21,7 @@ const err = (msg) => errors.push(msg);
 const warn = (msg) => warnings.push(msg);
 
 // ---------------------------------------------------------------- chargement des fichiers data/*.js
-const DATA = ["albums", "tracklists", "stats", "track-streams", "track-streams-prev", "samples", "history"];
+const DATA = ["albums", "tracklists", "stats", "track-streams", "track-history", "samples", "history"];
 const sandbox = { window: {} };
 vm.createContext(sandbox);
 for (const f of DATA) {
@@ -156,7 +156,33 @@ function checkTrackStreams(obj, file) {
   }
 }
 checkTrackStreams(W.TRACK_STREAMS, "data/track-streams.js");
-checkTrackStreams(W.TRACK_STREAMS_PREV, "data/track-streams-prev.js");
+
+// ---------------------------------------------------------------- historique de chaque morceau
+const TH = W.TRACK_HISTORY;
+if (!isObj(TH) || !Array.isArray(TH.dates) || !isObj(TH.albums)) err("data/track-history.js : window.TRACK_HISTORY doit contenir dates et albums");
+else {
+  const F = "data/track-history.js";
+  TH.dates.forEach((d, i) => {
+    if (!isDate(d)) err(`${F} : date "${d}" invalide`);
+    else if (i && d <= TH.dates[i - 1]) err(`${F} : les dates doivent être uniques et dans l'ordre (${d})`);
+  });
+  for (const [id, m] of Object.entries(TH.albums)) {
+    if (!knownAlbum(id)) { err(`${F} : album « ${id} » inconnu`); continue; }
+    const all = allTitles(id);
+    for (const [titre, serie] of Object.entries(m || {})) {
+      const w = `${F}, « ${id} » / « ${titre} »`;
+      if (!all.has(titre)) err(`${w} : n'est dans aucune tracklist de l'album`);
+      if (!Array.isArray(serie) || serie.length !== TH.dates.length) { err(`${w} : il faut une valeur par date (${TH.dates.length})`); continue; }
+      let last = 0;
+      for (const [k, n] of serie.entries()) {
+        if (n === null) continue;
+        if (!(isInt(n) && n > 0)) err(`${w} : ${n} n'est pas un nombre de streams valide (${TH.dates[k]})`);
+        else if (n < last) warn(`${w} : les streams baissent le ${TH.dates[k]} (${last} → ${n})`);
+        else last = n;
+      }
+    }
+  }
+}
 
 // ---------------------------------------------------------------- stats
 const S = W.STATS || {};
@@ -181,9 +207,9 @@ for (const s of S.singles || []) {
   if (s.album && !knownAlbum(s.album)) err(`data/stats.js, singles « ${s.titre} » : album « ${s.album} » inconnu`);
   else if (s.album && !allTitles(s.album).has(s.titre)) warn(`data/stats.js, singles « ${s.titre} » : absent de la tracklist de « ${s.album} »`);
 }
-const prevDate = W.TRACK_STREAMS_PREV_DATE;
-if (prevDate != null && (!isDate(prevDate) || (isDate(sp.date) && prevDate >= sp.date)))
-  err(`data/track-streams-prev.js : date du relevé précédent "${prevDate}" invalide ou pas antérieure à ${sp.date}`);
+const lastTH = W.TRACK_HISTORY?.dates?.at(-1);
+if (lastTH && isDate(sp.date) && lastTH > sp.date) err(`data/track-history.js : dernier relevé (${lastTH}) postérieur au relevé de data/stats.js (${sp.date})`);
+else if (lastTH && lastTH !== sp.date) warn(`data/track-history.js : dernier relevé ${lastTH}, data/stats.js indique ${sp.date}`);
 
 // ---------------------------------------------------------------- historique
 let last = "";
