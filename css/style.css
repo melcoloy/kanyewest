@@ -82,6 +82,7 @@ body {
   color: var(--text);
   font-family: "Inter", system-ui, sans-serif;
   line-height: 1.5;
+  overflow-x: clip; /* le mur de pochettes incliné ne doit pas créer de défilement horizontal */
 }
 
 h1, h2, .album-title, .cover-letters { font-family: "Archivo Black", "Inter", sans-serif; }
@@ -119,6 +120,43 @@ html { scrollbar-color: var(--line-strong) var(--bg); }
   line-height: .95;
   margin: 0;
 }
+/* Logo + titre */
+.hero-brand { display: flex; align-items: center; gap: clamp(14px, 2.5vw, 28px); position: relative; z-index: 1; }
+.logo {
+  flex: 0 0 auto; width: clamp(64px, 10vw, 128px); height: auto;
+  filter: drop-shadow(0 10px 24px rgba(0,0,0,.45)) drop-shadow(0 0 18px var(--glow));
+}
+/* Le disque tourne à l'arrivée sur la page, puis en continu au survol */
+.logo-spin { transform-origin: 60px 60px; animation: spin-in 2.4s cubic-bezier(.2,.8,.2,1) both; }
+.hero-brand:hover .logo-spin { animation: spin-loop 3s linear infinite; }
+@keyframes spin-in { from { transform: rotate(-200deg); } to { transform: rotate(0deg); } }
+@keyframes spin-loop { to { transform: rotate(360deg); } }
+
+/* Mur de pochettes à droite de l'en-tête (grand écran uniquement) */
+.hero-wall {
+  position: absolute; z-index: 0; top: -60px; right: -2%; bottom: -40px; width: 70%;
+  display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; align-content: center;
+  transform: rotate(-8deg); pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 45%, #000 80%, transparent),
+                      linear-gradient(to bottom, transparent, #000 25%, #000 55%, transparent 85%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent, #000 45%, #000 80%, transparent),
+              linear-gradient(to bottom, transparent, #000 25%, #000 55%, transparent 85%);
+  mask-composite: intersect;
+  opacity: .3;
+}
+.wall-tile {
+  position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden;
+  display: grid; place-items: center; color: rgba(255,255,255,.8);
+  font-family: "Archivo Black", sans-serif; font-size: .7rem;
+  box-shadow: 0 8px 20px -8px rgba(0,0,0,.6);
+  animation: wall-in .8s cubic-bezier(.2,.8,.2,1) both;
+}
+.wall-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .6s; }
+.wall-tile.has-img img { opacity: 1; }
+@keyframes wall-in { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
+@media (max-width: 900px) { .hero-wall { display: none; } }
+
 .hero h1 span {
   color: var(--muted);
   background: linear-gradient(100deg, var(--muted), var(--accent));
@@ -164,7 +202,7 @@ html { scroll-behavior: smooth; }
   border-radius: var(--radius);
   padding: 16px;
 }
-.stat b { display: block; font-size: 2rem; font-family: "Archivo Black", sans-serif; }
+.stat b { display: block; font-size: clamp(1.5rem, 2.4vw, 2rem); white-space: nowrap; font-family: "Archivo Black", sans-serif; }
 .stat span { color: var(--muted); font-size: .85rem; }
 
 /* ---------- Timeline ---------- */
@@ -630,7 +668,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 48px; }
 
 /* ---------- Bouton thème ---------- */
 .theme-btn {
-  position: absolute; top: 20px; right: 24px;
+  position: absolute; top: 20px; right: 24px; z-index: 2;
   width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
   background: var(--surface); border: 1px solid var(--line); color: var(--text); font-size: 1.1rem;
 }

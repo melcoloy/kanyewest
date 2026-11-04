@@ -841,9 +841,31 @@ renderGrid();
 renderStatsSection();
 bindEvents();
 
+// Mur de pochettes de l'en-tête : 24 cases (3 rangées de 8), dégradé de l'album en attendant sa pochette
+function renderHeroWall() {
+  const wall = $("#hero-wall");
+  if (!wall) return;
+  // Décalage d'une rangée à l'autre pour que la même pochette ne soit pas empilée
+  const list = Array.from({ length: 24 }, (_, i) => albums[(i + Math.floor(i / 8) * 5) % albums.length]);
+  wall.innerHTML = list
+    .map((a, i) => `<span class="wall-tile" data-id="${a.id}" style="background:${gradient(a.palette)};animation-delay:${(i % 8) * 0.05 + Math.floor(i / 8) * 0.1}s">${initials(a.titre)}</span>`)
+    .join("");
+}
+function setWallCover(id, src) {
+  for (const t of document.querySelectorAll(`.wall-tile[data-id="${id}"]:not(.has-img)`)) {
+    const img = new Image();
+    img.alt = "";
+    img.onload = () => t.classList.add("has-img");
+    img.src = src;
+    t.prepend(img);
+  }
+}
+renderHeroWall();
+
 if (window.Covers) {
   Covers.loadAll(albums, (id, data) => {
     covers[id] = data;
+    setWallCover(id, data.img);
     const card = document.querySelector(`.card[data-id="${id}"] .cover`);
     if (card && !card.classList.contains("has-img")) {
       const img = new Image();
