@@ -425,6 +425,7 @@ const fmtShort = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("fr-BE"
 const fmtDelta = (n) => (n >= 1e9 ? `${(n / 1e9).toFixed(2).replace(".", ",")} Md` : n >= 1e6 ? `${Math.round(n / 1e6)} M` : `${Math.round(n / 1e3)} k`);
 
 // Courbe SVG simple : points = [{ date, v }]
+let chartId = 0; // chaque courbe a son propre dégradé (id unique dans la page)
 function lineChart(points, { height = 140 } = {}) {
   const W = 600, H = height, P = 6;
   const vs = points.map((p) => p.v);
@@ -434,11 +435,20 @@ function lineChart(points, { height = 140 } = {}) {
   const y = (v) => H - P - ((v - min) / (max - min || 1)) * (H - P * 2);
   const pts = points.map((p) => `${x(p.date).toFixed(1)},${y(p.v).toFixed(1)}`);
   const last = points.at(-1);
+  const gid = `chart-grad-${++chartId}`;
+  // Le point final est en HTML (et pas dans le SVG étiré) pour rester bien rond
+  const endX = ((x(last.date) / W) * 100).toFixed(2), endY = ((y(last.v) / H) * 100).toFixed(2);
   return `
-    <svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Évolution des streams">
-      <polygon class="chart-area" points="${P},${H - P} ${pts.join(" ")} ${W - P},${H - P}" />
-      <polyline class="chart-line" points="${pts.join(" ")}" vector-effect="non-scaling-stroke" />
-    </svg>
+    <div class="chart-wrap">
+      <svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Évolution des streams">
+        <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" class="chart-stop-top" /><stop offset="1" class="chart-stop-bottom" />
+        </linearGradient></defs>
+        <polygon class="chart-area" fill="url(#${gid})" points="${P},${H - P} ${pts.join(" ")} ${W - P},${H - P}" />
+        <polyline class="chart-line" points="${pts.join(" ")}" vector-effect="non-scaling-stroke" />
+      </svg>
+      <span class="chart-dot" style="left:${endX}%;top:${endY}%"></span>
+    </div>
     <div class="chart-axis"><span>${fmtShort(points[0].date)}</span><span>${fmtShort(last.date)}</span></div>`;
 }
 
@@ -453,7 +463,7 @@ function historyBlock(points, label) {
   return `
     <div class="hist-head">
       <span><b>+${fmtDelta(last.v - prev.v)}</b> depuis le ${fmtShort(prev.date)}</span>
-      <span class="muted">+${fmtDelta(last.v - first.v)} depuis le ${fmtShort(first.date)} · ${label}</span>
+      <span class="muted">${first !== prev ? `+${fmtDelta(last.v - first.v)} depuis le ${fmtShort(first.date)} · ` : ""}${label}</span>
     </div>
     ${lineChart(points)}`;
 }
@@ -768,3 +778,5 @@ if (window.Covers) {
     document.dispatchEvent(new CustomEvent("cover-loaded", { detail: id }));
   });
 }
+// Les cartes apparaissent en fondu au premier affichage seulement (pas à chaque frappe dans la recherche)
+setTimeout(() => $("#grid").classList.remove("intro"), 1200);
