@@ -8,6 +8,8 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
 - **Pochettes** chargées automatiquement (API iTunes Search), ou tes propres images
 - **Liens d'écoute** : Spotify, Apple Music, Deezer, YouTube Music
 - **Tracklist complète** dans chaque fiche, avec durées et **invités crédités** — clic sur un invité = tous ses albums avec Ye
+- **Recherche rapide** partout (touche `/`, `Ctrl + K` ou la loupe de la barre d'onglets) : sections, jeux, albums,
+  morceaux, invités, samples — ↑ ↓ et Entrée pour ouvrir
 - **Recherche** (album, morceau, invité, label, année), sans tenir compte des accents ni des majuscules : les morceaux trouvés (éditions deluxe comprises) s'affichent dans une liste, un clic ouvre la fiche sur le bon titre
 - **Filtres** par année, par album, solo / collaborations, et **tri** (date, classement, longueur)
 - **Fiche détaillée** par album : date, label, place au Billboard 200, titres clés, distinctions, lien Apple Music — navigation avec ← →
@@ -70,6 +72,7 @@ kanyewest/
 │   ├── invites.js         ← graphe des invités
 │   ├── samples.js         ← page Samples
 │   ├── tierlist.js        ← Mon classement (albums, morceaux, partage, top global)
+│   ├── quicksearch.js     ← recherche rapide (/ ou Ctrl + K)
 │   ├── theme.js           ← mode clair / sombre
 │   └── tabs.js            ← navigation entre les onglets
 ├── img/                   ← tes pochettes perso (optionnel)

@@ -181,7 +181,7 @@
       if (act === "next") { game.i++; return game.i >= game.list.length ? end() : next(); }
     });
     document.addEventListener("keydown", (e) => {
-      if (window.currentView?.() !== "jeux/pochette" || document.getElementById("modal").open) return;
+      if (window.currentView?.() !== "jeux/pochette" || document.getElementById("modal").open || e.target.closest?.("input, select, textarea")) return;
       const r = game?.round;
       if (r && !r.answered && /^[1-4]$/.test(e.key)) answer(r.choices[+e.key - 1].id);
     });

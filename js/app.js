@@ -1059,7 +1059,7 @@ function bindEvents() {
   document.addEventListener("keydown", (e) => {
     const row = e.target.closest?.("#stats-table tr[data-id], #singles li[data-id], #sp-songs li[data-id]");
     if (row && e.key === "Enter") return openAlbum(row.dataset.id);
-    if (!$("#modal").open) return;
+    if (!$("#modal").open || e.target.closest?.("input, select, textarea")) return;
     if (e.key === "ArrowLeft") step(-1);
     if (e.key === "ArrowRight") step(1);
   });

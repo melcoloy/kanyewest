@@ -196,6 +196,13 @@
     if (state.selected && byName[name].n < state.min) state.min = 1;
     render();
   }
+  // Pour la recherche rapide (js/quicksearch.js) : affiche directement la fiche d'un invité
+  window.selectGuest = (name) => {
+    if (!byName[name]) return;
+    state.selected = null;
+    state.query = "";
+    select(name);
+  };
 
   root.addEventListener("click", (e) => {
     const g = e.target.closest("[data-guest]");

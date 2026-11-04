@@ -178,6 +178,32 @@ html { scrollbar-color: var(--line-strong) var(--bg); }
   display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;
 }
 
+/* Recherche rapide (js/quicksearch.js) */
+.qs-btn {
+  flex-shrink: 0; display: grid; place-items: center; width: 38px; height: 38px; padding: 0; margin-right: 2px;
+  border-radius: 50%; background: none; border: 1px solid transparent; color: var(--muted); cursor: pointer;
+}
+.qs-btn svg, .qs-head svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.qs-btn:hover { color: var(--accent); border-color: var(--line); }
+.qs-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+dialog.qs { width: min(640px, calc(100% - 32px)); margin: 10vh auto auto; max-height: 76vh; display: none; flex-direction: column; overflow: hidden; }
+dialog.qs[open] { display: flex; }
+.qs-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); color: var(--muted); }
+#qs-input { flex: 1; min-width: 0; background: none; border: 0; outline: none; color: var(--text); font: inherit; font-size: 1.1rem; }
+#qs-input::-webkit-search-cancel-button { display: none; }
+.qs kbd { font: inherit; font-size: .72rem; color: var(--muted); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; margin: 0 2px; }
+.qs-list { list-style: none; margin: 0; padding: 6px; overflow-y: auto; flex: 1; }
+.qs-group { padding: 10px 10px 4px; font-size: .7rem; text-transform: uppercase; letter-spacing: .12em; color: var(--accent); font-weight: 600; }
+.qs-item { display: flex; align-items: center; gap: 12px; padding: 7px 10px; border-radius: 10px; cursor: pointer; }
+.qs-item.active { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.qs-cov { flex: 0 0 36px !important; width: 36px !important; height: 36px !important; border-radius: 6px; font-size: .68rem !important; }
+.qs-ico { display: grid; place-items: center; background: var(--surface-2); color: var(--accent); font-size: 1rem !important; }
+.qs-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.qs-main b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qs-main span { font-size: .8rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qs-empty { padding: 18px 12px; }
+.qs-foot { margin: 0; padding: 8px 16px; border-top: 1px solid var(--line); font-size: .76rem; }
+
 /* Volume des extraits */
 .vol { position: relative; flex-shrink: 0; padding-right: 24px; }
 .vol svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -1207,6 +1233,9 @@ footer {
   .mobile-only { display: inline; }
   .tabs-inner, .disco-head { padding-left: 16px; padding-right: 16px; }
   .vol { padding-right: 8px; }
+  dialog.qs { width: 100%; max-width: none; margin: 0 0 auto; max-height: 80vh; border-radius: 0 0 20px 20px; border-top: none; }
+  dialog.qs[open] { animation-name: fade; }
+  .qs-foot, .qs-esc { display: none; }
   .vol-pop { right: 8px; }
   #vol-range { width: 120px; }
   .tab { padding-left: 10px; padding-right: 10px; }
