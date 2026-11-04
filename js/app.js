@@ -291,6 +291,7 @@ const statsState = { key: "date", dir: 1 };
 function renderStatsSection() {
   renderSpotify();
   renderHistory();
+  renderGains();
   renderFirstWeek();
   renderStatsTable();
   renderSingles();
@@ -472,6 +473,66 @@ function renderHistory() {
   const el = $("#sp-history");
   if (!el) return;
   el.innerHTML = historyBlock(HIST.filter((h) => h.total).map((h) => ({ date: h.date, v: h.total })), "toute la carrière");
+}
+
+// ---------- Plus fortes hausses (relevé actuel comparé au précédent) ----------
+const TS_PREV = window.TRACK_STREAMS_PREV || {};
+const GAINS_SHOWN = 10;
+const GAINS_PCT_MIN = 5e6; // en %, on ignore les tout petits morceaux (quelques milliers d'écoutes = gros pourcentage)
+let gainsMode = "abs";
+
+function trackGains() {
+  const out = [];
+  for (const a of albums) {
+    for (const [titre, now] of Object.entries(TS[a.id] || {})) {
+      const before = TS_PREV[a.id]?.[titre];
+      if (!before || now <= before) continue; // pas de chiffre précédent, ou pas mis à jour (Kids See Ghosts…)
+      out.push({ a, titre, now, gain: now - before, pct: (now - before) / before });
+    }
+  }
+  return out;
+}
+
+// Édition (standard / deluxe…) où se trouve le morceau, pour ouvrir la fiche au bon endroit
+const editionOf = (id, titre) =>
+  (tracks[id] || []).some((x) => x.titre === titre) ? "standard" : (editions[id] || []).find((e) => e.tracks.some((x) => x.titre === titre))?.id || "standard";
+
+function renderGains() {
+  const panel = $("#gains-panel");
+  const all = trackGains();
+  const prevDate = window.TRACK_STREAMS_PREV_DATE;
+  panel.hidden = !all.length || !prevDate;
+  if (panel.hidden) return;
+
+  const days = Math.round((new Date(S.spotify.date) - new Date(prevDate)) / 864e5);
+  $("#gains-sub").textContent =
+    `Streams gagnés entre le ${fmtShort(prevDate)} et le ${fmtShort(S.spotify.date)} (${days} jour${days > 1 ? "s" : ""})` +
+    (gainsMode === "pct" ? ", par rapport au total du morceau (à partir de 5 M de streams)." : ".");
+  const list = (gainsMode === "pct" ? all.filter((g) => g.now - g.gain >= GAINS_PCT_MIN).sort((x, y) => y.pct - x.pct) : all.sort((x, y) => y.gain - x.gain)).slice(0, GAINS_SHOWN);
+  const max = gainsMode === "pct" ? list[0].pct : list[0].gain;
+  const pct = (g) => `+${(g.pct * 100).toFixed(g.pct < 0.1 ? 1 : 0).replace(".", ",")} %`;
+
+  $("#gains").innerHTML = list
+    .map((g, i) => {
+      const v = gainsMode === "pct" ? g.pct : g.gain;
+      return `
+    <li>
+      <button class="hit gain" data-id="${g.a.id}" data-titre="${escapeHtml(g.titre)}">
+        <span class="sp-rank">${i + 1}</span>
+        <span class="hit-cov" style="background:${gradient(g.a.palette)}">${covers[g.a.id] ? `<img src="${covers[g.a.id].img}" alt="" loading="lazy">` : initials(g.a.titre)}</span>
+        <span class="hit-main">
+          <span class="hit-title">${escapeHtml(g.titre)}</span>
+          <span class="hit-album">${escapeHtml(g.a.titre)} · ${year(g.a.date)}</span>
+          <span class="sp-bar" style="width:${(v / max) * 100}%"></span>
+        </span>
+        <span class="gain-val">
+          <b>${gainsMode === "pct" ? pct(g) : "+" + fmtDelta(g.gain)}</b>
+          <span>${gainsMode === "pct" ? "+" + fmtDelta(g.gain) : pct(g)}</span>
+        </span>
+      </button>
+    </li>`;
+    })
+    .join("");
 }
 
 function renderAlbumHistory(a) {
@@ -668,6 +729,25 @@ function bindEvents() {
   $("#hit-more").addEventListener("click", () => {
     hitsExpanded = !hitsExpanded;
     renderTrackHits();
+  });
+
+  // Plus fortes hausses : choix streams / %, et clic sur un morceau = sa fiche, titre surligné
+  document.querySelector("#gains-panel .ed-picker").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-gains]");
+    if (!b || b.dataset.gains === gainsMode) return;
+    gainsMode = b.dataset.gains;
+    for (const x of e.currentTarget.children) {
+      x.classList.toggle("active", x === b);
+      x.setAttribute("aria-pressed", x === b);
+    }
+    renderGains();
+  });
+  $("#gains").addEventListener("click", (e) => {
+    const b = e.target.closest(".hit");
+    if (!b) return;
+    editionChoice[b.dataset.id] = editionOf(b.dataset.id, b.dataset.titre);
+    openAlbum(b.dataset.id);
+    requestAnimationFrame(() => focusTrack(b.dataset.titre));
   });
 
   // Clic sur un morceau trouvé : ouvre la fiche de l'album sur la bonne édition et surligne le titre

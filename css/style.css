@@ -388,6 +388,17 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 48px; }
 .sp-val { font-size: .85rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tag { font-size: .68rem; font-weight: 500; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 6px; vertical-align: 2px; }
 
+/* Plus fortes hausses */
+.gains-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px 16px; flex-wrap: wrap; }
+.gains-head .ed-picker { margin: 0 0 14px; }
+.gains { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 2px 24px; }
+.gains li { min-width: 0; }
+.gain { margin: 0; }
+.gain .sp-bar { background: linear-gradient(90deg, var(--bar-2), var(--accent)); }
+.gain-val { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.gain-val b { color: var(--accent); font-size: .95rem; }
+.gain-val span { color: var(--muted); font-size: .74rem; }
+
 /* Barres 1re semaine */
 .fw-chart { display: flex; flex-direction: column; gap: 4px; }
 .fw-row {
@@ -1057,7 +1068,7 @@ footer {
   .panel { padding: 18px 14px; }
   .fw-row { grid-template-columns: 1fr; gap: 4px; }
   .singles { grid-template-columns: 1fr; }
-  .sp-songs { grid-template-columns: 1fr; }
+  .sp-songs, .gains { grid-template-columns: 1fr; }
   .sp-total b { font-size: 1.7rem; }
   .mobile-only { display: inline; }
   .tabs-inner, .disco-head { padding-left: 16px; padding-right: 16px; }

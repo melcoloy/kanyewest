@@ -20,6 +20,7 @@ const SHELL = [
   "data/tracklists.js",
   "data/stats.js",
   "data/track-streams.js",
+  "data/track-streams-prev.js",
   "data/samples.js",
   "data/history.js",
   "js/covers.js",

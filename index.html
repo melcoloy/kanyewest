@@ -108,6 +108,20 @@
         <div id="sp-history"></div>
       </div>
 
+      <div class="panel" id="gains-panel" hidden>
+        <div class="gains-head">
+          <div>
+            <h3>Plus fortes hausses</h3>
+            <p class="muted panel-sub" id="gains-sub"></p>
+          </div>
+          <div class="ed-picker" role="group" aria-label="Classer les hausses">
+            <button class="ed-btn active" data-gains="abs" aria-pressed="true">En streams</button>
+            <button class="ed-btn" data-gains="pct" aria-pressed="false">En %</button>
+          </div>
+        </div>
+        <ol class="gains" id="gains"></ol>
+      </div>
+
       <div class="panel">
         <h3>Ventes de la 1re semaine</h3>
         <p class="muted panel-sub">Unités Billboard la semaine de sortie. Jusqu'en 2014, seules les ventes d'albums comptent ; depuis, le streaming est inclus (barres hachurées).</p>
@@ -228,6 +242,7 @@
   <script src="data/tracklists.js"></script>
   <script src="data/stats.js"></script>
   <script src="data/track-streams.js"></script>
+  <script src="data/track-streams-prev.js"></script>
   <script src="data/samples.js"></script>
   <script src="data/history.js"></script>
   <script src="js/covers.js"></script>
