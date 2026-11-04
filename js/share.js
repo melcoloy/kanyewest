@@ -4,7 +4,7 @@
 //   ShareResult.text({ jeu, score, grille, vue })  → texte à partager (avec le lien du jeu)
 //   ShareResult.grid([[points, max], …])           → une case par manche : 🟩 tout, 🟨 une partie, ⬛ raté
 //   ShareResult.button()                           → le bouton « Partager mon score » (data-act="share-result")
-//   ShareResult.share(texte, bouton)               → feuille de partage sur téléphone, copie ailleurs
+//   ShareResult.share(texte, bouton[, message])    → feuille de partage sur téléphone, copie ailleurs
 
 window.ShareResult = (() => {
   const LABEL = "📤 Partager mon score";
@@ -13,7 +13,7 @@ window.ShareResult = (() => {
   const text = ({ jeu, score, grille = "", vue }) => [`Ye · ${jeu} — ${score}`, grille, url(vue)].filter(Boolean).join("\n");
   const button = (label = LABEL) => `<button class="g-btn ghost share-res" data-act="share-result" data-label="${label}">${label}</button>`;
 
-  async function share(txt, btn) {
+  async function share(txt, btn, copied = "✓ Résultat copié") {
     const label = btn?.dataset.label || LABEL;
     const done = (msg) => {
       if (!btn) return;
@@ -30,7 +30,7 @@ window.ShareResult = (() => {
     }
     try {
       await navigator.clipboard.writeText(txt);
-      done("✓ Résultat copié");
+      done(copied);
     } catch {
       prompt("Copie ton résultat :", txt);
     }

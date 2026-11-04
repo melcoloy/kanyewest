@@ -39,6 +39,20 @@ function serve() {
   return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve(server)));
 }
 
+// Extrait silencieux d'une seconde : remplace les extraits d'Apple pour jouer vraiment au blind test
+function silentWav(sec = 1, rate = 8000) {
+  const n = sec * rate, b = Buffer.alloc(44 + n * 2);
+  b.write("RIFF", 0); b.writeUInt32LE(36 + n * 2, 4); b.write("WAVE", 8); b.write("fmt ", 12);
+  b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22); b.writeUInt32LE(rate, 24);
+  b.writeUInt32LE(rate * 2, 28); b.writeUInt16LE(2, 32); b.writeUInt16LE(16, 34); b.write("data", 36); b.writeUInt32LE(n * 2, 40);
+  return b;
+}
+const WAV = silentWav();
+async function fakePreviews(page) {
+  await page.route("**/__smoke/*.wav", (r) => r.fulfill({ body: WAV, contentType: "audio/wav" }));
+  await page.evaluate(() => { Previews.ye = async (t) => `/__smoke/${encodeURIComponent(t.titre)}.wav`; });
+}
+
 const failures = [];
 const check = (ok, msg) => {
   if (!ok) failures.push(msg);
@@ -174,6 +188,50 @@ async function run(browser, base, label, viewport) {
   await ctx.close();
 }
 
+// ---- Duel à distance : A joue 10 manches et crée le lien, B l'ouvre et rejoue la même partie
+async function remoteDuel(browser, base) {
+  console.log("\nDuel à distance (blind test)");
+  const open = async (url) => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block", permissions: ["clipboard-read", "clipboard-write"] });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
+    await page.goto(url);
+    await page.waitForTimeout(400);
+    await fakePreviews(page);
+    return { ctx, page, errors };
+  };
+  const play = async (page) => {
+    const seen = [];
+    for (let i = 0; i < 10; i++) {
+      await page.waitForSelector("#blindtest [data-pick]", { timeout: 5000 });
+      seen.push(await page.$$eval("#blindtest [data-pick]", (l) => l.map((x) => x.dataset.pick).join("/")));
+      await page.click(`#blindtest [data-pick]:nth-child(${(i % 4) + 1})`);
+      await page.click('#blindtest [data-act="next"]');
+    }
+    return seen;
+  };
+  const A = await open(base + "/index.html#jeux/blind-test");
+  await A.page.click('#blindtest [data-act="start"]');
+  const seenA = await play(A.page);
+  check(await A.page.$('#blindtest [data-act="challenge"]'), "Fin de partie : bouton « Défier un ami »");
+  await A.page.fill("#duel-name", "Test");
+  await A.page.click('#blindtest [data-act="challenge"]');
+  await A.page.waitForTimeout(150);
+  const link = (await A.page.evaluate(() => navigator.clipboard.readText())).match(/https?:\/\/\S+/)?.[0];
+  check(link && link.includes("?duel=1-"), "Lien de défi créé");
+  const B = await open(link);
+  check(await B.page.$("#blindtest .duel-intro"), "Lien ouvert : écran du défi avec le score à battre");
+  await B.page.click('#blindtest [data-act="accept"]');
+  const seenB = await play(B.page);
+  check(seenA.every((x, i) => x === seenB[i]), "Mêmes morceaux et mêmes propositions pour les deux joueurs");
+  check(await B.page.$("#blindtest .duel-rows"), "Fin du défi : les deux scores côte à côte");
+  check(![...A.errors, ...B.errors].length, `Aucune erreur JavaScript${A.errors.length + B.errors.length ? " : " + [...A.errors, ...B.errors].join(" / ") : ""}`);
+  await A.ctx.close();
+  await B.ctx.close();
+}
+
 // ---- Accessibilité : chaque vue, en sombre puis en clair
 const A11Y_VIEWS = [
   ["Discographie", "", null],
@@ -185,6 +243,7 @@ const A11Y_VIEWS = [
   ["Mon classement", "#classement", null],
   ["Défi du jour", "#defi", null],
   ["Blind test", "#jeux/blind-test", null],
+  ["Défi reçu (duel)", "&duel=1-abcdef-tc-0123x0123x-Test#jeux/blind-test", null],
   ["Pochette floue", "#jeux/pochette", null],
   ["Devine l'année", "#jeux/annee", '#annee [data-act="start"]'],
   ["Plus ou moins", "#jeux/plus-ou-moins", null],
@@ -220,10 +279,12 @@ async function accessibility(browser, base) {
 (async () => {
   const server = await serve();
   const base = `http://127.0.0.1:${server.address().port}`;
-  const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+  // Lecture audio sans clic préalable (le test lance les extraits silencieux tout seul)
+  const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required"], ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}) });
   try {
     await run(browser, base, "Ordinateur", { width: 1280, height: 900 });
     await run(browser, base, "Mobile", { width: 390, height: 844 });
+    await remoteDuel(browser, base);
     await accessibility(browser, base);
   } catch (e) {
     failures.push(`Le test s'est arrêté : ${e.message.split("\n")[0]}`);

@@ -7,6 +7,9 @@
 //       10 manches en solo, contre la montre (60 s) ou en duel à deux (buzzers A et L).
 //   - Défi du jour (#defi)    : 5 morceaux tirés au sort à partir de la date, donc les mêmes
 //     pour tout le monde ; une seule partie par jour, série de jours, résultat à partager.
+// Duel à distance : chaque partie solo de 10 manches a une « graine » ; le lien de défi
+//   (?duel=…#jeux/blind-test) la transmet avec le mode et les résultats, et l'ami rejoue
+//   exactement la même partie (morceaux, propositions, début des extraits), puis compare.
 // Extraits : js/previews.js. S'appuie sur app.js (albums, covers, tracks, TS, gradient,
 // escapeHtml, fmtStreams, initials, toSec, openAlbum).
 
@@ -91,6 +94,41 @@
     const PLAYERS = ["Joueur 1", "Joueur 2"];
     const BUZZ_KEYS = ["a", "l"];
     const selection = () => (settings.sel === "classiques" ? classiques : pool);
+    const MODES = { titre: "Trouve le morceau", album: "Trouve l'album" };
+    const SELS = { classiques: "Les classiques", tout: "Toute la discographie" };
+
+    // ---- Duel à distance : ?duel=1-<graine>-<mode><morceaux>-<manches>[-<prénom>]
+    //   mode t / a (morceau / album), morceaux c / t (classiques / tout),
+    //   manches : un caractère par manche, 0-3 = trouvé à 2 / 5 / 10 / 20 s, x = raté
+    const DUEL_RE = /^1-([a-z0-9]{4,12})-([ta])([ct])-([0-3x]{10})(?:-(.*))?$/;
+    const duelScore = (m) => [...m].reduce((s, c) => s + (c === "x" ? 0 : 4 - +c), 0);
+    const duelGrid = (m) => [...m].map((c) => (c === "x" ? "⬛" : EMOJI[+c])).join("");
+    const newSeed = () => Math.random().toString(36).slice(2, 10).padEnd(6, "0");
+    let challenge = null; // défi reçu : { seed, mode, sel, manches, name }
+    let lastSolo = null;  // dernière partie solo terminée, pour en faire un défi
+    let pseudo = store.get("ye-pseudo", "");
+    if (!daily) {
+      const raw = new URLSearchParams(location.search).get("duel");
+      const m = raw?.match(DUEL_RE);
+      if (m) challenge = { seed: m[1], mode: m[2] === "a" ? "album" : "titre", sel: m[3] === "c" ? "classiques" : "tout", manches: m[4], name: (m[5] || "").trim().slice(0, 24) || "Ton ami" };
+      // Le défi est lu : on le retire de l'adresse (le lien reste valable pour d'autres)
+      if (raw != null) history.replaceState(null, "", location.pathname + location.hash);
+    }
+    function duelLink(d) {
+      const name = pseudo.trim().replace(/\s+/g, " ").slice(0, 20);
+      const code = `1-${d.seed}-${d.mode === "album" ? "a" : "t"}${d.sel === "classiques" ? "c" : "t"}-${d.manches}${name ? "-" + name : ""}`;
+      return `${location.origin}${location.pathname}?duel=${encodeURIComponent(code)}#jeux/blind-test`;
+    }
+    const duelText = (d) =>
+      `⚔️ Je te défie au blind test Ye (${MODES[d.mode]} · ${SELS[d.sel]}) : ${duelScore(d.manches)}/40\n${duelGrid(d.manches)}\nLes mêmes 10 morceaux pour toi : ${duelLink(d)}`;
+    // Bloc « Défier un ami » de l'écran de fin (prénom facultatif, gardé dans le navigateur)
+    const duelBox = (label) => `
+      <div class="duel-box">
+        <label class="duel-name"><span>Ton prénom <span class="muted">(facultatif)</span></span>
+          <input id="duel-name" maxlength="20" autocomplete="nickname" value="${escapeHtml(pseudo)}" />
+        </label>
+        <button class="g-btn duel-btn" data-act="challenge" data-label="${label}">${label}</button>
+      </div>`;
 
     // ---- Lecteur
     let limit = 0, rafId = 0, offset = 0, offsetFrac = 0; // limit : durée d'écoute autorisée depuis `offset`
@@ -179,8 +217,9 @@
 
     // Tire la liste des morceaux. Défi du jour : tout est calculé d'avance à partir de la date
     // (morceaux, propositions, point de départ de l'extrait) pour que chacun ait la même partie.
-    function buildList() {
-      const rng = daily ? seeded("ye-defi-" + dateKey()) : Math.random;
+    function buildList(seed) {
+      const rng = daily ? seeded("ye-defi-" + dateKey()) : seed ? seeded("ye-duel-" + seed) : Math.random;
+      const fixed = daily || !!seed; // partie reproductible : tout est tiré d'avance
       let list = shuffle(selection(), rng);
       // Évite deux morceaux du même album d'affilée quand c'est possible
       for (let i = 1; i < list.length; i++) {
@@ -189,8 +228,8 @@
           if (j > 0) [list[i], list[j]] = [list[j], list[i]];
         }
       }
-      if (daily) list = list.slice(0, MANCHES + 6); // quelques réserves si un extrait manque
-      return list.map((t) => ({ t, choices: daily ? makeChoices(t, rng) : null, offsetFrac: rng() }));
+      if (fixed) list = list.slice(0, MANCHES + 6); // quelques réserves si un extrait manque
+      return list.map((t) => ({ t, choices: fixed ? makeChoices(t, rng) : null, offsetFrac: rng() }));
     }
 
     async function prepare(g) {
@@ -251,7 +290,25 @@
       stop();
       game = null;
       clearInterval(countdownTimer);
-      return daily ? renderDailyIntro() : renderOptions();
+      return daily ? renderDailyIntro() : challenge ? renderChallenge() : renderOptions();
+    }
+
+    // Défi reçu : l'écran d'accueil montre le score à battre
+    function renderChallenge() {
+      const c = challenge;
+      root.innerHTML = `
+        <div class="bt-setup duel-intro">
+          <p class="dj-date">⚔️ ${escapeHtml(c.name)} te défie</p>
+          <div class="dj-result">
+            <p class="dj-grid" aria-label="Son résultat">${duelGrid(c.manches)}</p>
+            <p class="bt-final"><b>${duelScore(c.manches)}</b> / 40 pts à battre</p>
+            <p class="muted">Blind test · ${MODES[c.mode]} · ${SELS[c.sel]} : <b>les mêmes 10 morceaux</b>, avec les mêmes propositions.</p>
+            <button class="g-btn bt-start" data-act="accept">Relever le défi</button>
+            <button class="bt-link" data-act="decline">Non merci, jouer normalement</button>
+            <p class="bt-msg muted" role="status"></p>
+          </div>
+          <div class="bt-rules">${stepsHtml()}</div>
+        </div>`;
     }
 
     function renderOptions() {
@@ -342,11 +399,13 @@
         </div>`;
     }
 
-    async function start() {
+    async function start(ch = null) {
       owner = api;
       audio.src = SILENCE;
       audio.play().catch(() => {});
-      game = { list: buildList(), i: 0, score: 0, history: [], round: null, next: null, day: dateKey(), scores: [0, 0], deadline: 0 };
+      // Partie solo de 10 manches : une graine, pour pouvoir en faire un défi (ou celle du défi reçu)
+      const seed = ch ? ch.seed : !daily && fmt() === "solo" ? newSeed() : null;
+      game = { list: buildList(seed), seed, challenge: ch, i: 0, score: 0, history: [], round: null, next: null, day: dateKey(), scores: [0, 0], deadline: 0 };
       const msg = root.querySelector(".bt-msg");
       root.querySelector(".bt-start").disabled = true;
       msg.textContent = "Chargement des extraits…";
@@ -546,13 +605,14 @@
       showRound(round, true);
     }
 
-    function recapHtml(list) {
+    function recapHtml(list, vs = null) {
       return `<ol class="bt-recap">${list
-        .map((h) => {
+        .map((h, i) => {
           const a = albums.find((x) => x.id === h.albumId);
           return `<li data-album="${a.id}" tabindex="0">
             <span class="bt-rcov sm" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img src="${covers[a.id].img}" alt="">` : ""}</span>
             <span class="bt-rmain"><b>${escapeHtml(h.titre)}</b><span class="muted">${escapeHtml(a.titre)}</span></span>
+            ${vs ? `<span class="duel-vs" title="Son résultat">${vs[i] === "x" ? "⬛" : EMOJI[+vs[i]] || ""}</span>` : ""}
             <span class="bt-pts ${h.gained ? "ok" : "ko"}">${h.who != null ? `<span class="bt-who p${h.who + 1}">J${h.who + 1}</span> ` : ""}${h.gained ? `${daily ? EMOJI[h.level] + " " : ""}+${h.gained} · ${LEVELS[h.level]} s` : h.picked ? "✗" : "passé"}</span>
           </li>`;
         })
@@ -578,8 +638,6 @@
         game = null;
         return renderDailyIntro();
       }
-      const MODES = { titre: "Trouve le morceau", album: "Trouve l'album" };
-      const SELS = { classiques: "Les classiques", tout: "Toute la discographie" };
       const jeu = `Blind test (${MODES[settings.mode]} · ${SELS[settings.sel]}${chrono() ? " · contre la montre" : duel() ? " · duel" : ""})`;
       if (duel()) {
         const [a, b] = game.scores;
@@ -611,6 +669,11 @@
         grille: grid({ manches }),
         vue: "jeux/blind-test",
       });
+      // Partie solo complète : elle peut devenir un défi
+      lastSolo = game.seed && manches.length === 10
+        ? { seed: game.seed, mode: settings.mode, sel: settings.sel, manches: manches.map((h) => (h.gained ? String(h.level) : "x")).join("") }
+        : null;
+      if (game.challenge && lastSolo) return renderDuelEnd(manches, game.challenge);
       root.innerHTML = `
         <div class="bt-end">
           <p class="g-over-title">${record && game.score > 0 ? "Nouveau record !" : "Partie terminée"}</p>
@@ -622,6 +685,33 @@
             ${ShareResult.button()}
             <button class="bt-link" data-act="setup">Changer de mode</button>
           </div>
+          ${lastSolo ? duelBox("⚔️ Défier un ami sur ces morceaux") : ""}
+        </div>`;
+      root.querySelector('[data-act="start"]').focus();
+    }
+
+    // Fin d'un défi reçu : les deux scores, manche par manche
+    function renderDuelEnd(manches, c) {
+      challenge = null; // défi joué
+      const me = game.score, them = duelScore(c.manches);
+      const title = me > them ? "Tu gagnes ! 🎉" : me < them ? `${escapeHtml(c.name)} gagne` : "Égalité !";
+      endShare = `⚔️ Défi blind test Ye : moi ${me} – ${them} ${c.name}\n${duelGrid(lastSolo.manches)} (moi)\n${duelGrid(c.manches)} (${c.name})`;
+      root.innerHTML = `
+        <div class="bt-end">
+          <p class="g-over-title">${title}</p>
+          <p class="bt-final bt-duel-final"><b class="p1">${me}</b> – <b class="p2">${them}</b></p>
+          <div class="duel-rows">
+            <p><span>Toi</span><span class="dj-grid">${duelGrid(lastSolo.manches)}</span><b>${me}</b></p>
+            <p><span>${escapeHtml(c.name)}</span><span class="dj-grid">${duelGrid(c.manches)}</span><b>${them}</b></p>
+          </div>
+          <p class="muted duel-legend">En face de chaque morceau : le résultat de ${escapeHtml(c.name)}, puis le tien.</p>
+          ${recapHtml(manches, [...c.manches])}
+          <div class="bt-actions">
+            <button class="g-btn" data-act="start">Rejouer</button>
+            ${ShareResult.button()}
+            <button class="bt-link" data-act="setup">Changer de mode</button>
+          </div>
+          ${duelBox(`⚔️ Renvoyer le défi à ${escapeHtml(c.name)}`)}
         </div>`;
       root.querySelector('[data-act="start"]').focus();
     }
@@ -648,6 +738,19 @@
       }
       if (act === "share") return share(shareText(dateKey(), defi().jours[dateKey()]), btn);
       if (act === "share-result") return ShareResult.share(endShare, btn);
+      if (act === "accept") {
+        Object.assign(settings, { mode: challenge.mode, sel: challenge.sel, format: "solo" });
+        return start(challenge);
+      }
+      if (act === "decline") {
+        challenge = null;
+        return renderSetup();
+      }
+      if (act === "challenge" && lastSolo) {
+        pseudo = root.querySelector("#duel-name")?.value || "";
+        store.set("ye-pseudo", pseudo);
+        return ShareResult.share(duelText(lastSolo), btn, "✓ Défi copié, envoie-le !");
+      }
       if (act === "setup") return renderSetup();
       if (act === "quit") {
         clearInterval(clock);
