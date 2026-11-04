@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ye — Discographie interactive</title>
+  <title>Kanye West · Discographie</title>
   <meta name="description" content="Discographie studio interactive de Kanye West / Ye : timeline, comparateur, samples, invités, classements, défi du jour et jeux." />
   <!-- Aperçu quand le lien est partagé (WhatsApp, Discord, Messenger…). L'image doit avoir une adresse complète :
        si l'adresse du site change, mets à jour og:url et og:image. -->
   <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="Ye — Discographie interactive" />
-  <meta property="og:title" content="Kanye West / Ye — Discographie interactive" />
+  <meta property="og:site_name" content="Kanye West · Discographie" />
+  <meta property="og:title" content="Kanye West / Ye · Discographie interactive" />
   <meta property="og:description" content="Albums, stats, samples, invités, classements, défi du jour et blind test." />
   <meta property="og:url" content="https://melcoloy.github.io/kanyewest/" />
   <meta property="og:image" content="https://melcoloy.github.io/kanyewest/icons/og-image.png?v=2" />
@@ -73,15 +73,26 @@
     <div class="hero-wall" id="hero-wall" aria-hidden="true"></div>
   </header>
 
-  <nav class="tabs" role="tablist" aria-label="Sections du site">
-    <div class="tabs-inner">
-      <button class="tab" role="tab" id="tab-disco" aria-controls="panel-disco" data-tab="disco">Discographie</button>
-      <button class="tab" role="tab" id="tab-comparer" aria-controls="panel-comparer" data-tab="comparer">Comparer</button>
-      <button class="tab" role="tab" id="tab-samples" aria-controls="panel-samples" data-tab="samples">Samples</button>
-      <button class="tab" role="tab" id="tab-invites" aria-controls="panel-invites" data-tab="invites">Invités</button>
-      <button class="tab" role="tab" id="tab-classement" aria-controls="panel-classement" data-tab="classement">Mon classement</button>
-      <button class="tab" role="tab" id="tab-defi" aria-controls="panel-defi" data-tab="defi">Défi du jour</button>
-      <button class="tab" role="tab" id="tab-jeux" aria-controls="panel-jeux" data-tab="jeux">Jeux</button>
+  <nav class="tabs" aria-label="Sections du site">
+    <div class="tabs-bar">
+      <div class="tabs-inner" role="tablist">
+        <button class="tab" role="tab" id="tab-disco" aria-controls="panel-disco" data-tab="disco">Discographie</button>
+        <button class="tab" role="tab" id="tab-comparer" aria-controls="panel-comparer" data-tab="comparer">Comparer</button>
+        <button class="tab" role="tab" id="tab-samples" aria-controls="panel-samples" data-tab="samples">Samples</button>
+        <button class="tab" role="tab" id="tab-invites" aria-controls="panel-invites" data-tab="invites">Invités</button>
+        <button class="tab" role="tab" id="tab-classement" aria-controls="panel-classement" data-tab="classement">Mon classement</button>
+        <button class="tab" role="tab" id="tab-defi" aria-controls="panel-defi" data-tab="defi">Défi du jour</button>
+        <button class="tab" role="tab" id="tab-jeux" aria-controls="panel-jeux" data-tab="jeux">Jeux</button>
+      </div>
+      <!-- Volume des extraits (js/volume.js) -->
+      <div class="vol" id="vol">
+        <button class="vol-btn" id="vol-btn" aria-haspopup="true" aria-expanded="false" aria-controls="vol-pop" title="Volume"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="v-body" d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" /><path class="v-w1" d="M15.5 9.2a4 4 0 0 1 0 5.6" /><path class="v-w2" d="M18.3 6.6a7.6 7.6 0 0 1 0 10.8" /><path class="v-x" d="M16 9.5l5 5m0-5l-5 5" /></svg></button>
+        <div class="vol-pop" id="vol-pop" hidden>
+          <button class="vol-mute" id="vol-mute" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="v-body" d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" /><path class="v-w1" d="M15.5 9.2a4 4 0 0 1 0 5.6" /><path class="v-w2" d="M18.3 6.6a7.6 7.6 0 0 1 0 10.8" /><path class="v-x" d="M16 9.5l5 5m0-5l-5 5" /></svg></button>
+          <input type="range" id="vol-range" min="0" max="100" step="1" aria-label="Volume des extraits" />
+          <span class="vol-val" id="vol-val"></span>
+        </div>
+      </div>
     </div>
   </nav>
 
@@ -288,6 +299,7 @@
   <script src="js/app.js"></script>
   <script src="js/previews.js"></script>
   <script src="js/game.js"></script>
+  <script src="js/volume.js"></script>
   <script src="js/player.js"></script>
   <script src="js/blindtest.js"></script>
   <script src="js/jeux.js"></script>

@@ -67,6 +67,7 @@
   // Un seul lecteur audio pour les deux jeux
   const audio = new Audio();
   audio.preload = "auto";
+  window.Volume?.register(audio);
   // Son vide joué au clic sur « Jouer » : débloque la lecture automatique (Safari / iOS)
   const SILENCE = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
   let owner = null; // jeu qui utilise le lecteur
