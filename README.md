@@ -9,6 +9,8 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
 - **Recherche** (album, morceau, invité, label, année), sans tenir compte des accents ni des majuscules : les morceaux trouvés (éditions deluxe comprises) s'affichent dans une liste, un clic ouvre la fiche sur le bon titre
 - **Filtres** par année, par album, solo / collaborations, et **tri** (date, classement, longueur)
 - **Fiche détaillée** par album : date, label, place au Billboard 200, titres clés, distinctions, lien Apple Music — navigation avec ← →
+- **Liens directs** : `#album/graduation` ouvre la fiche, `#album/graduation/Stronger` la fiche avec le morceau surligné ;
+  bouton « Partager » dans chaque fiche, clic sur un titre de la tracklist pour l'ajouter au lien
 - **Graphique** de la longueur des albums
 - **Plus fortes hausses** : les 10 morceaux qui ont gagné le plus de streams depuis le relevé précédent, en nombre ou en %, clic = la fiche sur le bon titre
 - **Volume des extraits** : bouton 🔊 dans la barre d'onglets (curseur + couper le son), réglage gardé d'une visite à l'autre

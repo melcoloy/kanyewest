@@ -1083,6 +1083,14 @@ dialog::backdrop { background: rgba(0,0,0,.7); backdrop-filter: blur(3px); }
 .listen a:hover { border-color: var(--accent); color: var(--accent); }
 .modal-hero h2 { font-size: clamp(1.6rem, 5vw, 2.6rem); margin: 0; line-height: 1.05; }
 .modal-hero p { margin: 6px 0 0; color: rgba(255,255,255,.8); }
+.share-btn {
+  margin-top: 14px; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+  font: inherit; font-size: .85rem; font-weight: 500; color: #fff;
+  background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.28); backdrop-filter: blur(6px);
+}
+.share-btn:hover, .share-btn:focus-visible { background: rgba(0,0,0,.55); border-color: #fff; outline: none; }
+.tracklist li { cursor: pointer; border-radius: 6px; }
+.tracklist li:not(.hit-row):hover { background: var(--surface-2); }
 .modal-content { padding: 24px 28px; }
 .facts {
   display: grid;

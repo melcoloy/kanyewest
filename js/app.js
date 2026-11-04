@@ -214,14 +214,16 @@ function renderTrackHits() {
   more.textContent = hitsExpanded ? "Réduire la liste" : `Voir les ${hits.length - HITS_SHOWN} autres morceaux`;
 }
 
-// Met en évidence un morceau dans la tracklist de la fiche ouverte
-function focusTrack(titre) {
-  const li = [...document.querySelectorAll("#tracklist-wrap .tracklist li")].find(
-    (l) => l.querySelector(".tr-title")?.firstChild?.textContent.trim() === titre
-  );
-  if (!li) return;
+// Met en évidence un morceau dans la tracklist de la fiche ouverte (et l'ajoute au lien de la fiche)
+const rowTitle = (li) => li.querySelector(".tr-title")?.firstChild?.textContent.trim();
+function focusTrack(titre, { scroll = true } = {}) {
+  const lis = [...document.querySelectorAll("#tracklist-wrap .tracklist li")];
+  lis.forEach((l) => l.classList.remove("hit-row"));
+  const li = lis.find((l) => rowTitle(l) === titre);
+  if (!li) return setAlbumHash();
   li.classList.add("hit-row");
-  li.scrollIntoView({ block: "center", behavior: "smooth" });
+  if (scroll) li.scrollIntoView({ block: "center", behavior: "smooth" });
+  setAlbumHash(titre);
 }
 
 const filtersActive = () => state.query || state.year || state.album || state.type !== "all";
@@ -549,6 +551,62 @@ function openAlbum(id) {
   current = list.findIndex((a) => a.id === id);
   renderModal();
   if (!$("#modal").open) $("#modal").showModal();
+  setAlbumHash();
+}
+
+// ---------- Liens directs : #album/<id> ou #album/<id>/<titre du morceau> ----------
+// L'adresse suit la fiche ouverte (remplacée, pas ajoutée à l'historique) : on peut la copier à tout moment.
+const albumLink = (id, titre) => `#album/${id}${titre ? "/" + encodeURIComponent(titre) : ""}`;
+let linkTrack = ""; // morceau sélectionné dans le lien
+
+function setAlbumHash(titre = "") {
+  linkTrack = titre;
+  syncShareBtn();
+  const h = albumLink(visible[current].id, titre);
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+
+// Adresse de l'onglet en cours, sans fiche
+const tabUrl = () => {
+  const v = window.currentView?.() || "disco";
+  return v === "disco" ? location.pathname + location.search : "#" + v;
+};
+
+function openFromHash() {
+  const m = location.hash.match(/^#album\/([^/]+)(?:\/(.+))?$/);
+  if (!m) return false;
+  const id = decodeURIComponent(m[1]);
+  const titre = m[2] ? decodeURIComponent(m[2]) : "";
+  if (!albums.some((a) => a.id === id)) return false;
+  if (titre) editionChoice[id] = editionOf(id, titre);
+  openAlbum(id);
+  if (titre) requestAnimationFrame(() => focusTrack(titre));
+  return true;
+}
+
+function syncShareBtn() {
+  const b = $("#share-btn");
+  if (b && !b.dataset.flash) b.textContent = linkTrack ? "🔗 Partager ce morceau" : "🔗 Partager l'album";
+}
+
+async function shareLink() {
+  const b = $("#share-btn");
+  const a = visible[current];
+  const url = location.href;
+  const title = `${linkTrack ? linkTrack + " · " : ""}${a.titre} · Kanye West`;
+  // Sur téléphone : la feuille de partage du système ; ailleurs : copie dans le presse-papiers
+  if (navigator.share && matchMedia("(pointer: coarse)").matches) {
+    try { await navigator.share({ title, url }); } catch {}
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    b.dataset.flash = "1";
+    b.textContent = "✓ Lien copié";
+    setTimeout(() => { delete b.dataset.flash; syncShareBtn(); }, 1800);
+  } catch {
+    prompt("Copie ce lien :", url);
+  }
 }
 
 function renderModal() {
@@ -568,6 +626,7 @@ function renderModal() {
       <div>
         <h2>${escapeHtml(a.titre)}</h2>
         <p>${a.avec ? "Kanye West & " + escapeHtml(a.avec) : "Kanye West"} · ère « ${escapeHtml(a.ere)} »</p>
+        <button class="share-btn" id="share-btn" type="button">🔗 Partager l'album</button>
       </div>
     </div>
     <div class="modal-content">
@@ -590,6 +649,7 @@ function renderModal() {
   $("#prev").disabled = current === 0;
   $("#next").disabled = current === visible.length - 1;
   $("#modal").scrollTop = 0;
+  syncShareBtn();
 }
 
 // Liens d'écoute : lien direct si fourni dans `liens` (ou trouvé par l'API pour Apple), sinon une recherche
@@ -681,6 +741,7 @@ function step(delta) {
   if (n < 0 || n >= visible.length) return;
   current = n;
   renderModal();
+  setAlbumHash();
 }
 
 // ---------- Événements ----------
@@ -806,6 +867,25 @@ function bindEvents() {
     window.MiniPlayer?.stop();
     window.setPageTitle?.();
     renderGrid();
+    linkTrack = "";
+    if (location.hash.startsWith("#album/")) history.replaceState(null, "", tabUrl());
+  });
+
+  // Retour / Suivant du navigateur : ouvre ou ferme la fiche selon l'adresse
+  window.addEventListener("popstate", () => {
+    if (location.hash.startsWith("#album/")) openFromHash();
+    else if ($("#modal").open) $("#modal").close();
+  });
+
+  // Partager, et clic sur un titre de la tracklist = le sélectionner dans le lien
+  $("#modal").addEventListener("click", (e) => {
+    if (e.target.closest("#share-btn")) return shareLink();
+    const li = e.target.closest("#tracklist-wrap .tracklist li");
+    if (!li || e.target.closest("button, a")) return;
+    if (li.classList.contains("hit-row")) {
+      li.classList.remove("hit-row");
+      setAlbumHash();
+    } else focusTrack(rowTitle(li), { scroll: false });
   });
 
   // Choix de l'édition (standard / deluxe) : on ne redessine que la tracklist
@@ -816,6 +896,7 @@ function bindEvents() {
     editionChoice[a.id] = b.dataset.edition;
     MiniPlayer.stop();
     $("#tracklist-wrap").outerHTML = renderTracklist(a);
+    if (linkTrack) focusTrack(linkTrack, { scroll: false }); // le garde s'il existe dans cette édition
   });
 
   // ▶ sur un numéro de la tracklist : extrait iTunes (js/player.js + js/previews.js)
@@ -836,6 +917,7 @@ function bindEvents() {
 }
 
 // ---------- Init ----------
+window.addEventListener("DOMContentLoaded", openFromHash);
 renderStats();
 renderTimeline();
 renderFilterOptions();
@@ -876,7 +958,10 @@ if (window.Covers) {
       img.src = data.img;
       card.prepend(img);
     }
-    if ($("#modal").open && visible[current]?.id === id) renderModal();
+    if ($("#modal").open && visible[current]?.id === id) {
+      renderModal();
+      if (linkTrack) focusTrack(linkTrack, { scroll: false }); // la tracklist vient d'être redessinée
+    }
     clearTimeout(window.__tblTimer);
     window.__tblTimer = setTimeout(() => (renderStatsTable(), renderTrackHits()), 300);
     document.dispatchEvent(new CustomEvent("cover-loaded", { detail: id }));
