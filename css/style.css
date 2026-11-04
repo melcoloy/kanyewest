@@ -126,11 +126,13 @@ html { scrollbar-color: var(--line-strong) var(--bg); }
   flex: 0 0 auto; width: clamp(64px, 10vw, 128px); height: auto;
   filter: drop-shadow(0 10px 24px rgba(0,0,0,.45)) drop-shadow(0 0 18px var(--glow));
 }
-/* Le disque tourne à l'arrivée sur la page, puis en continu au survol */
-.logo-spin { transform-origin: 60px 60px; animation: spin-in 2.4s cubic-bezier(.2,.8,.2,1) both; }
-.hero-brand:hover .logo-spin { animation: spin-loop 3s linear infinite; }
-@keyframes spin-in { from { transform: rotate(-200deg); } to { transform: rotate(0deg); } }
-@keyframes spin-loop { to { transform: rotate(360deg); } }
+/* L'ours arrive en rebondissant, hoche la tête au survol et cligne des yeux de temps en temps */
+.logo-bob { transform-origin: 60px 105px; animation: bear-in .9s cubic-bezier(.3,1.5,.5,1) both; }
+.hero-brand:hover .logo-bob { animation: bear-nod 1.2s ease-in-out infinite; }
+.logo-eyes { transform-origin: 60px 66px; animation: blink 5s 2s infinite; }
+@keyframes bear-in { from { opacity: 0; transform: translateY(18px) scale(.85); } to { opacity: 1; transform: none; } }
+@keyframes bear-nod { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-7deg); } 75% { transform: rotate(7deg); } }
+@keyframes blink { 0%, 95%, 100% { transform: scaleY(1); } 97.5% { transform: scaleY(.1); } }
 
 /* Mur de pochettes à droite de l'en-tête (grand écran uniquement) */
 .hero-wall {
