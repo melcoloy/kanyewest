@@ -22,7 +22,8 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
 - **Onglets** (lien direct possible : `#comparer`, `#samples`, `#invites`, `#classement`, `#defi`, `#jeux/…`) :
   - **Comparer** : deux albums côte à côte, le meilleur chiffre de chaque ligne mis en valeur
   - **Samples** : les morceaux d'origine qu'il a samplés, à écouter côte à côte avec sa version
-  - **Invités** : graphe de tous les artistes en featuring (plus ils sont proches du centre, plus ils reviennent souvent)
+  - **Invités** : graphe de tous les artistes en featuring (plus ils sont proches du centre, plus ils reviennent souvent),
+    liste classée par nombre de morceaux ou par streams cumulés, et pour chaque invité : albums, période, morceau le plus écouté
   - **Mon classement** : tier list S → D des albums ou des morceaux de chaque album, export en image,
     partage par lien (l'ami voit ton classement au-dessus du sien) et « Mon top global » (tous tes sons en S et A)
   - **Défi du jour** : 5 morceaux, les mêmes pour tout le monde chaque jour ; série de jours et résultat à partager en emojis

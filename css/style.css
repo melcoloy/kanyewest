@@ -958,11 +958,20 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 48px; }
   display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; cursor: pointer; font-size: .92rem;
 }
 .gv-list li:hover, .gv-list li:focus-visible, .gv-list li.match { background: var(--surface); outline: none; }
-.gv-list li span:nth-child(2) { flex: 1; }
+.gv-name { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.gv-name small { color: var(--muted); font-size: .74rem; }
 .gv-list b { color: var(--accent); font-variant-numeric: tabular-nums; }
 .gv-rank { width: 22px; color: var(--muted); font-size: .78rem; text-align: right; font-variant-numeric: tabular-nums; }
 .gv-detail h3 { font-family: "Archivo Black", sans-serif; font-size: 1.4rem; margin: 10px 0 4px; }
 .gv-detail p { margin: 0; font-size: .88rem; }
+.gv-detail p + p { margin-top: 4px; }
+.gv-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0 12px; }
+.gv-facts div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.gv-facts b { display: block; font-family: "Archivo Black", sans-serif; font-size: 1.15rem; line-height: 1.2; white-space: nowrap; }
+.gv-facts span { color: var(--muted); font-size: .76rem; }
+.gv-top { color: var(--text); }
+.gv-sst { color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gv-note { margin-top: 10px !important; font-size: .78rem !important; }
 
 /* ---------- Classement : partage, top global ---------- */
 .tl-shared { margin-bottom: 14px; }
