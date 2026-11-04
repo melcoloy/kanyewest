@@ -135,7 +135,7 @@
                 items
                   .map(
                     ({ titre, a }) => `<button class="tl-tile tl-chip tl-ro" data-album="${a.id}" title="${escapeHtml(a.titre)}">
-                      <span class="tl-mini" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img src="${covers[a.id].img}" alt="">` : ""}</span>${escapeHtml(titre)}</button>`
+                      <span class="tl-mini" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img loading="lazy" decoding="async" src="${covers[a.id].img}" alt="">` : ""}</span>${escapeHtml(titre)}</button>`
                   )
                   .join("") || `<span class="muted tl-done">Rien pour l'instant</span>`
               }</div>
@@ -183,7 +183,7 @@
     const a = byId[id];
     const img = covers[id]?.img;
     return `<button class="tl-tile${selected === id ? " selected" : ""}" data-id="${id}" title="${escapeHtml(a.titre)} (${a.date.slice(0, 4)})" style="background:${gradient(a.palette)}">
-      ${img ? `<img src="${img}" alt="" draggable="false">` : `<span aria-hidden="true">${initials(a.titre)}</span>`}
+      ${img ? `<img loading="lazy" decoding="async" src="${img}" alt="" draggable="false">` : `<span aria-hidden="true">${initials(a.titre)}</span>`}
       <span class="visually-hidden">${escapeHtml(a.titre)}</span>
     </button>`;
   };
@@ -207,7 +207,7 @@
               .join("")}
           </optgroup>
         </select>
-        ${a ? `<span class="tl-scope-cov" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img src="${covers[a.id].img}" alt="">` : ""}</span>` : ""}
+        ${a ? `<span class="tl-scope-cov" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img loading="lazy" decoding="async" src="${covers[a.id].img}" alt="">` : ""}</span>` : ""}
       </div>
       ${scope === "top" ? renderTop() : `
       ${shared && shared.scope === scope ? renderShared() : ""}
@@ -478,7 +478,9 @@
   }
 
   let coverTimer = 0;
+  let ready = false; // préparé à la première ouverture de l'onglet
   document.addEventListener("cover-loaded", () => {
+    if (!ready) return;
     clearTimeout(coverTimer);
     coverTimer = setTimeout(() => { if (!drag) render(); }, 200);
   });
@@ -487,7 +489,9 @@
     const [tab, sub] = [e.detail.split("/")[0], e.detail.split("/").slice(1).join("/")];
     if (tab === "classement" && sub) openShared(decodeURIComponent(sub));
   });
-  render();
-  const v = window.currentView?.() || "";
-  if (v.startsWith("classement/")) openShared(decodeURIComponent(v.slice(11)));
+  // (le lien partagé #classement/… est ouvert par l'écouteur « tab-change » ci-dessus, après la préparation)
+  window.onTabOpen("classement", () => {
+    ready = true;
+    render();
+  });
 })();

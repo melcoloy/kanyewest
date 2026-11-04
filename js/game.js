@@ -55,7 +55,7 @@
     const sub = a ? escapeHtml(a.titre) + " · " + a.date.slice(0, 4) : t.invite ? escapeHtml(t.invite) : "Hors album";
     return `
       <div class="g-card" style="background:${bg}">
-        ${img ? `<img src="${img}" alt="">` : ""}
+        ${img ? `<img loading="lazy" decoding="async" src="${img}" alt="">` : ""}
         <div class="g-shade"></div>
         <div class="g-info">
           <p class="g-title">${escapeHtml(t.titre)}</p>

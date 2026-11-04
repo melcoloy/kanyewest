@@ -38,7 +38,11 @@
 
   // ---- Index : tout ce qu'on peut chercher, une fois pour toutes
   const go = (tab, sub = "") => () => window.showTab?.(tab, sub);
-  const scrollTo = (sel) => () => { window.showTab?.("disco"); requestAnimationFrame(() => document.querySelector(sel)?.scrollIntoView({ behavior: "smooth", block: "start" })); };
+  const scrollTo = (sel) => () => {
+    window.showTab?.("disco");
+    window.ensureStats?.(); // les stats sont dessinées à la demande
+    requestAnimationFrame(() => document.querySelector(sel)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
   const PAGES = [
     ["Discographie", "Albums, frise, recherche", go("disco")],
     ["Stats", "Ventes, certifications, streams Spotify", scrollTo("#stats-title")],
@@ -127,7 +131,7 @@
 
   const thumb = (r) =>
     r.a
-      ? `<span class="hit-cov qs-cov" style="background:${gradient(r.a.palette)}">${covers[r.a.id] ? `<img src="${covers[r.a.id].img}" alt="">` : initials(r.a.titre)}</span>`
+      ? `<span class="hit-cov qs-cov" style="background:${gradient(r.a.palette)}">${covers[r.a.id] ? `<img loading="lazy" decoding="async" src="${covers[r.a.id].img}" alt="">` : initials(r.a.titre)}</span>`
       : `<span class="qs-cov qs-ico">${{ page: "→", guest: "★" }[r.kind] || "•"}</span>`;
 
   function render() {

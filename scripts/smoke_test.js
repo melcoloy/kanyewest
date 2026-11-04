@@ -84,8 +84,11 @@ async function run(browser, base, label, viewport) {
   check(nCards === nAlbums, `Discographie : ${nCards} cartes pour ${nAlbums} albums`);
   check(await exists("#anniv .anniv"), "Bandeau « Ce jour-là » affiché");
   check(await exists("#timeline .tl-dot"), "Frise chronologique affichée");
-  check(await exists("#sp-songs li"), "Stats Spotify affichées");
+  // Les stats (bas de page) se dessinent à l'approche ou quand le navigateur est libre
+  await evalPage(() => document.getElementById("stats-title").scrollIntoView());
+  check(await page.waitForSelector("#sp-songs li", { timeout: 4000 }).then(() => true, () => false), "Stats Spotify affichées");
   check(await exists("#gains li"), "Plus fortes hausses affichées");
+  await evalPage(() => scrollTo(0, 0));
   await page.fill("#search", "jay");
   await page.waitForTimeout(150);
   check(await exists("#hit-list .hit"), "Recherche « jay » : des morceaux trouvés");

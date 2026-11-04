@@ -473,7 +473,7 @@
         const a = c.album;
         const img = covers[a.id]?.img;
         return `<button class="bt-choice bt-album${state}" data-pick="${escapeHtml(c.key)}"${dis}>
-          <span class="bt-cov" style="background:${gradient(a.palette)}">${img ? `<img src="${img}" alt="">` : `<span>${initials(a.titre)}</span>`}</span>
+          <span class="bt-cov" style="background:${gradient(a.palette)}">${img ? `<img loading="lazy" decoding="async" src="${img}" alt="">` : `<span>${initials(a.titre)}</span>`}</span>
           <span class="bt-ctext"><kbd>${i + 1}</kbd>${escapeHtml(a.titre)}</span>
         </button>`;
       }
@@ -490,7 +490,7 @@
       const marks = LEVELS.map((s) => `<span class="bt-mark" style="left:${(s / LEVELS.at(-1)) * 100}%"></span>`).join("");
       const reveal = r.answered
         ? `<div class="bt-reveal ${r.gained ? "ok" : "ko"}">
-            <span class="bt-rcov" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img src="${covers[a.id].img}" alt="">` : ""}</span>
+            <span class="bt-rcov" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img loading="lazy" decoding="async" src="${covers[a.id].img}" alt="">` : ""}</span>
             <div>
               <p class="bt-verdict">${
                 duel()
@@ -610,7 +610,7 @@
         .map((h, i) => {
           const a = albums.find((x) => x.id === h.albumId);
           return `<li data-album="${a.id}" tabindex="0">
-            <span class="bt-rcov sm" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img src="${covers[a.id].img}" alt="">` : ""}</span>
+            <span class="bt-rcov sm" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img loading="lazy" decoding="async" src="${covers[a.id].img}" alt="">` : ""}</span>
             <span class="bt-rmain"><b>${escapeHtml(h.titre)}</b><span class="muted">${escapeHtml(a.titre)}</span></span>
             ${vs ? `<span class="duel-vs" title="Son résultat">${vs[i] === "x" ? "⬛" : EMOJI[+vs[i]] || ""}</span>` : ""}
             <span class="bt-pts ${h.gained ? "ok" : "ko"}">${h.who != null ? `<span class="bt-who p${h.who + 1}">J${h.who + 1}</span> ` : ""}${h.gained ? `${daily ? EMOJI[h.level] + " " : ""}+${h.gained} · ${LEVELS[h.level]} s` : h.picked ? "✗" : "passé"}</span>

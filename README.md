@@ -145,6 +145,15 @@ déborde sur le côté. Il vérifie aussi l'**accessibilité** de chaque vue, en
 pendant le test (résultat identique à chaque fois).
 En local : `npm install --no-save playwright axe-core && npx playwright install chromium`, puis `node scripts/smoke_test.js`.
 
+## Vitesse de chargement
+
+- Les polices Google se chargent sans bloquer le premier affichage (le texte apparaît tout de suite).
+- Les onglets cachés (Invités, Samples, Comparer, Mon classement) se préparent la première fois qu'on les ouvre ;
+  pour un nouvel onglet, enregistrer sa préparation avec `window.onTabOpen("nom-de-l-onglet", init)` (js/app.js).
+- Les stats du bas de page se dessinent à l'approche ou quand le navigateur est libre (`ensureStats()`).
+- Les pochettes des listes ne se téléchargent qu'à l'approche (`loading="lazy"`) ; le mur de l'en-tête n'en charge
+  aucune sur petit écran, où il est masqué.
+
 ## Aperçu de lien
 
 Les balises `og:` de `index.html` pointent vers `https://melcoloy.github.io/kanyewest/`. Si l'adresse

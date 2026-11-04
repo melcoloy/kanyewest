@@ -28,7 +28,7 @@
   const albumOf = (id) => albums.find((a) => a.id === id);
   const pts = (n) => `${n} pt${n > 1 ? "s" : ""}`;
   const coverHtml = (a, cls = "bt-rcov") =>
-    `<span class="${cls}" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img src="${covers[a.id].img}" alt="">` : ""}</span>`;
+    `<span class="${cls}" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img loading="lazy" decoding="async" src="${covers[a.id].img}" alt="">` : ""}</span>`;
 
   // ---- Morceaux avec au moins un invité : édition standard + titres nouveaux des éditions deluxe.
   // Sans Donda 2 (pas d'extraits) ni les skits.
@@ -217,7 +217,7 @@
   document.addEventListener("cover-loaded", (e) => {
     const c = root.querySelector(".qi-cov");
     if (c && e.detail === game?.round?.t.albumId && covers[e.detail]?.img && !c.querySelector("img"))
-      c.innerHTML = `<img src="${covers[e.detail].img}" alt="">`;
+      c.innerHTML = `<img loading="lazy" decoding="async" src="${covers[e.detail].img}" alt="">`;
   });
   intro();
 })();

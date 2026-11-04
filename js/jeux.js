@@ -22,7 +22,7 @@
   const albumOf = (id) => albums.find((a) => a.id === id);
   const pts = (n) => `${n} pt${n > 1 ? "s" : ""}`;
   const coverHtml = (a, cls = "bt-rcov") =>
-    `<span class="${cls}" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img src="${covers[a.id].img}" alt="">` : ""}</span>`;
+    `<span class="${cls}" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img loading="lazy" decoding="async" src="${covers[a.id].img}" alt="">` : ""}</span>`;
 
   // =====================================================================
   // Pochette floue
