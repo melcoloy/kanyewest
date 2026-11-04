@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Test automatique du site dans un vrai navigateur (Chromium, via Playwright).
 //
-//   npm install --no-save playwright && npx playwright install chromium   (une fois)
+//   npm install --no-save playwright axe-core && npx playwright install chromium   (une fois)
 //   node scripts/smoke_test.js
 //
 // Lancé par GitHub Actions à chaque push (.github/workflows/check-data.yml, tâche « Site »).
@@ -9,12 +9,16 @@
 // extraits d'Apple, polices) pour que le test soit rapide et toujours identique, puis passe sur
 // tous les onglets, tous les jeux, les fiches album, les liens directs et la recherche rapide,
 // sur ordinateur et sur mobile. Il échoue à la moindre erreur JavaScript ou si une vérification rate.
+// Accessibilité : axe-core (règles WCAG 2.1 A et AA : contrastes, noms des boutons, rôles…) sur chaque
+// vue, en thème sombre et en thème clair.
 
 "use strict";
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { chromium } = require("playwright");
+let AXE = null;
+try { AXE = require.resolve("axe-core/axe.min.js"); } catch {}
 
 const ROOT = path.resolve(__dirname, "..");
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".webmanifest": "application/manifest+json", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".svg": "image/svg+xml" };
@@ -67,6 +71,7 @@ async function run(browser, base, label, viewport) {
   check(await exists("#anniv .anniv"), "Bandeau « Ce jour-là » affiché");
   check(await exists("#timeline .tl-dot"), "Frise chronologique affichée");
   check(await exists("#sp-songs li"), "Stats Spotify affichées");
+  check(await exists("#gains li"), "Plus fortes hausses affichées");
   await page.fill("#search", "jay");
   await page.waitForTimeout(150);
   check(await exists("#hit-list .hit"), "Recherche « jay » : des morceaux trouvés");
@@ -113,6 +118,7 @@ async function run(browser, base, label, viewport) {
     ["invite", "#quiz-invites", '#quiz-invites [data-act="start"]', "#quiz-invites [data-pick]"],
     ["plus-ou-moins", "#game", null, "#game [data-guess]"],
     ["pochette", "#pixel", null, null], // sans pochettes (hors ligne), le jeu reste sur son écran d'accueil
+    ["progression", "#progression", null, null], // records et badges
   ];
   for (const [sub, root, start, answer] of games) {
     try {
@@ -168,6 +174,49 @@ async function run(browser, base, label, viewport) {
   await ctx.close();
 }
 
+// ---- Accessibilité : chaque vue, en sombre puis en clair
+const A11Y_VIEWS = [
+  ["Discographie", "", null],
+  ["Fiche album", "#album/graduation/Stronger", null],
+  ["Recherche rapide", "", "quicksearch"],
+  ["Comparer", "#comparer", null],
+  ["Samples", "#samples", null],
+  ["Invités", "#invites", ".gv-list li"],
+  ["Mon classement", "#classement", null],
+  ["Défi du jour", "#defi", null],
+  ["Blind test", "#jeux/blind-test", null],
+  ["Pochette floue", "#jeux/pochette", null],
+  ["Devine l'année", "#jeux/annee", '#annee [data-act="start"]'],
+  ["Plus ou moins", "#jeux/plus-ou-moins", null],
+  ["Qui est l'invité ?", "#jeux/invite", '#quiz-invites [data-act="start"]'],
+  ["Ma progression", "#jeux/progression", null],
+];
+async function accessibility(browser, base) {
+  console.log("\nAccessibilité (axe-core, WCAG 2.1 A et AA)");
+  if (!AXE) return check(false, "axe-core n'est pas installé (npm install --no-save axe-core)");
+  for (const scheme of ["dark", "light"]) {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: scheme, serviceWorkers: "block" });
+    const page = await ctx.newPage();
+    await page.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
+    for (const [i, [name, hash, action]] of A11Y_VIEWS.entries()) {
+      await page.goto(`${base}/index.html?vue=${i}${hash}`); // vrai rechargement (un simple # garderait l'état)
+      await page.waitForTimeout(300);
+      if (action === "quicksearch") {
+        await page.keyboard.press("Control+k");
+        await page.keyboard.type("stron");
+      } else if (action) await page.click(action, { timeout: 5000 });
+      await page.waitForTimeout(150);
+      await page.addScriptTag({ path: AXE });
+      const violations = await page.evaluate(async () => {
+        const r = await axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] }, resultTypes: ["violations"] });
+        return r.violations.map((v) => `${v.id} — ${v.help} (${v.nodes.length} élément${v.nodes.length > 1 ? "s" : ""} : ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(", ")})`);
+      });
+      check(!violations.length, `${name} (thème ${scheme === "dark" ? "sombre" : "clair"})${violations.length ? " :\n      " + violations.join("\n      ") : ""}`);
+    }
+    await ctx.close();
+  }
+}
+
 (async () => {
   const server = await serve();
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -175,6 +224,7 @@ async function run(browser, base, label, viewport) {
   try {
     await run(browser, base, "Ordinateur", { width: 1280, height: 900 });
     await run(browser, base, "Mobile", { width: 390, height: 844 });
+    await accessibility(browser, base);
   } catch (e) {
     failures.push(`Le test s'est arrêté : ${e.message.split("\n")[0]}`);
     console.log(`  ✗ ${failures.at(-1)}`);

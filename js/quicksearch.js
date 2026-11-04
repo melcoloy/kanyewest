@@ -53,6 +53,7 @@
     ["Devine l'année", "Jeu · place le morceau sur la frise", go("jeux", "annee")],
     ["Plus ou moins", "Jeu · lequel a le plus de streams ?", go("jeux", "plus-ou-moins")],
     ["Qui est l'invité ?", "Jeu · trouve le featuring", go("jeux", "invite")],
+    ["Ma progression", "Records, série du défi, badges", go("jeux", "progression")],
   ].map(([titre, sub, run]) => ({ kind: "page", titre, sub, run, key: norm(titre + " " + sub) }));
 
   const openSong = (id, titre) => () => {

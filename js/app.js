@@ -279,9 +279,13 @@ const rowTitle = (li) => li.querySelector(".tr-title")?.firstChild?.textContent.
 function focusTrack(titre, { scroll = true } = {}) {
   const lis = [...document.querySelectorAll("#tracklist-wrap .tracklist li")];
   lis.forEach((l) => l.classList.remove("hit-row"));
+  document.querySelectorAll("#tracklist-wrap .tr-hist").forEach((el) => el.remove());
   const li = lis.find((l) => rowTitle(l) === titre);
   if (!li) return setAlbumHash();
   li.classList.add("hit-row");
+  // Courbe des streams de ce morceau, dès qu'il y a deux relevés
+  const pts = trackPoints(visible[current].id, titre);
+  if (pts.length >= 2) li.insertAdjacentHTML("beforeend", `<div class="tr-hist">${historyBlock(pts, "ce morceau")}</div>`);
   if (scroll) li.scrollIntoView({ block: "center", behavior: "smooth" });
   setAlbumHash(titre);
 }
@@ -404,7 +408,7 @@ function renderFirstWeek() {
       const v = S.albums[a.id].premiereSemaine;
       const streaming = +year(a.date) >= 2015;
       return `
-      <button class="fw-row" data-id="${a.id}" aria-label="${escapeHtml(a.titre)} : ${fmtNb(v)} unités">
+      <button class="fw-row" data-id="${a.id}">
         <span class="fw-name">${escapeHtml(a.titre)} <span class="fw-year">${year(a.date)}</span></span>
         <span class="fw-track">
           <span class="fw-bar${streaming ? " streaming" : ""}${a.id === record.id ? " record" : ""}" style="width:${(v / max) * 100}%"></span>
@@ -537,18 +541,46 @@ function renderHistory() {
   el.innerHTML = historyBlock(HIST.filter((h) => h.total).map((h) => ({ date: h.date, v: h.total })), "toute la carrière");
 }
 
-// ---------- Plus fortes hausses (relevé actuel comparé au précédent) ----------
-const TS_PREV = window.TRACK_STREAMS_PREV || {};
+// ---------- Historique de chaque morceau (data/track-history.js, un relevé par lundi) ----------
+const TH = window.TRACK_HISTORY || { dates: [], albums: {} };
+const NOW_DATE = window.STATS?.spotify?.date || TH.dates.at(-1);
+const trackHist = (id, titre) => TH.albums?.[id]?.[titre] || null;
+const streamsAt = (id, titre, k) => trackHist(id, titre)?.[k] ?? null;
+// Relevés antérieurs au relevé actuel : [{ date, k }]
+const PAST = TH.dates.map((date, k) => ({ date, k })).filter((x) => x.date < NOW_DATE);
+const PREV = PAST.at(-1) || null; // relevé précédent (hausses de la semaine)
+const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
+
+// Points de la courbe d'un morceau : tous ses relevés, plus le chiffre actuel
+function trackPoints(id, titre) {
+  const pts = (trackHist(id, titre) || []).map((v, k) => ({ date: TH.dates[k], v })).filter((p) => p.v);
+  const now = TS[id]?.[titre];
+  if (now && !pts.some((p) => p.date === NOW_DATE)) pts.push({ date: NOW_DATE, v: now });
+  return pts;
+}
+
+// ---------- Plus fortes hausses ----------
 const GAINS_SHOWN = 10;
 const GAINS_PCT_MIN = 5e6; // en %, on ignore les tout petits morceaux (quelques milliers d'écoutes = gros pourcentage)
 let gainsMode = "abs";
 
-function trackGains() {
+// Périodes possibles selon l'historique : dernier relevé, un mois (≥ 4 semaines), depuis le début
+function gainPeriods() {
+  if (!PREV) return [];
+  const out = [{ id: "semaine", label: "Semaine", from: PREV }];
+  const month = PAST.filter((x) => daysBetween(x.date, NOW_DATE) >= 27).at(-1);
+  if (month && month.k !== PREV.k) out.push({ id: "mois", label: "Mois", from: month });
+  if (PAST[0].k !== out.at(-1).from.k) out.push({ id: "debut", label: `Depuis le ${fmtShort(PAST[0].date)}`, from: PAST[0] });
+  return out;
+}
+let gainsPeriod = "semaine";
+
+function trackGains(from) {
   const out = [];
   for (const a of albums) {
     for (const [titre, now] of Object.entries(TS[a.id] || {})) {
-      const before = TS_PREV[a.id]?.[titre];
-      if (!before || now <= before) continue; // pas de chiffre précédent, ou pas mis à jour (Kids See Ghosts…)
+      const before = streamsAt(a.id, titre, from.k);
+      if (!before || now <= before) continue; // pas de chiffre à cette date, ou pas mis à jour (Kids See Ghosts…)
       out.push({ a, titre, now, gain: now - before, pct: (now - before) / before });
     }
   }
@@ -561,14 +593,23 @@ const editionOf = (id, titre) =>
 
 function renderGains() {
   const panel = $("#gains-panel");
-  const all = trackGains();
-  const prevDate = window.TRACK_STREAMS_PREV_DATE;
-  panel.hidden = !all.length || !prevDate;
+  const periods = gainPeriods();
+  const period = periods.find((p) => p.id === gainsPeriod) || periods[0];
+  const all = period ? trackGains(period.from) : [];
+  panel.hidden = !all.length;
   if (panel.hidden) return;
 
-  const days = Math.round((new Date(S.spotify.date) - new Date(prevDate)) / 864e5);
+  // Choix de la période, seulement s'il y a assez de relevés
+  const pick = $("#gains-period");
+  pick.hidden = periods.length < 2;
+  pick.innerHTML = periods
+    .map((p) => `<button class="ed-btn${p === period ? " active" : ""}" data-period="${p.id}" aria-pressed="${p === period}">${escapeHtml(p.label)}</button>`)
+    .join("");
+
+  const prevDate = period.from.date;
+  const days = daysBetween(prevDate, NOW_DATE);
   $("#gains-sub").textContent =
-    `Streams gagnés entre le ${fmtShort(prevDate)} et le ${fmtShort(S.spotify.date)} (${days} jour${days > 1 ? "s" : ""})` +
+    `Streams gagnés entre le ${fmtShort(prevDate)} et le ${fmtShort(NOW_DATE)} (${days} jour${days > 1 ? "s" : ""})` +
     (gainsMode === "pct" ? ", par rapport au total du morceau (à partir de 5 M de streams)." : ".");
   const list = (gainsMode === "pct" ? all.filter((g) => g.now - g.gain >= GAINS_PCT_MIN).sort((x, y) => y.pct - x.pct) : all.sort((x, y) => y.gain - x.gain)).slice(0, GAINS_SHOWN);
   const max = gainsMode === "pct" ? list[0].pct : list[0].gain;
@@ -612,6 +653,7 @@ function openAlbum(id) {
   renderModal();
   if (!$("#modal").open) $("#modal").showModal();
   setAlbumHash();
+  window.Progress?.seen(id);
 }
 
 // ---------- Liens directs : #album/<id> ou #album/<id>/<titre du morceau> ----------
@@ -753,13 +795,13 @@ function renderTracklist(a) {
   const st = t.map((x) => trackStreams(a.id, x.titre));
   const maxSt = Math.max(0, ...st.filter(Boolean));
   const hasSt = maxSt > 0;
-  // Streams gagnés depuis le relevé précédent (data/track-streams-prev.js)
+  // Streams gagnés depuis le relevé précédent (data/track-history.js)
   const gain = t.map((x, i) => {
-    const before = TS_PREV[a.id]?.[x.titre];
+    const before = PREV && streamsAt(a.id, x.titre, PREV.k);
     return st[i] && before && st[i] > before ? st[i] - before : 0;
   });
   const maxGain = Math.max(0, ...gain);
-  const prevDate = window.TRACK_STREAMS_PREV_DATE;
+  const prevDate = PREV?.date;
 
   return `<div id="tracklist-wrap">
     <h3>Tracklist <span class="h3-meta">${t.length} titres${total}${nbFeats ? ` · ${nbFeats} invités` : ""}${a.id === "donda-2" ? "" : " · clique sur un numéro pour écouter un extrait"}</span></h3>
@@ -781,7 +823,7 @@ function renderTracklist(a) {
           ${
             a.id === "donda-2" // la version Stem Player n'est pas sur les plateformes
               ? `<span class="tr-num">${i + 1}</span>`
-              : `<button class="tr-num tr-play" data-i="${i}" data-titre="${escapeHtml(x.titre)}" data-label="${i + 1}" data-state="idle" aria-label="Écouter un extrait">${i + 1}</button>`
+              : `<button class="tr-num tr-play" data-i="${i}" data-titre="${escapeHtml(x.titre)}" data-label="${i + 1}" data-state="idle" aria-label="${i + 1}. Écouter un extrait : ${escapeHtml(x.titre)}">${i + 1}</button>`
           }
           <span class="tr-title">${escapeHtml(x.titre)}${
             ed?.nouveaux.includes(x.titre) ? ' <span class="tag new">nouveau</span>' : ""
@@ -833,6 +875,7 @@ function playQueueAt(i) {
   const btns = queueButtons();
   while (i < btns.length && btns[i].disabled) i++; // extrait déjà connu comme introuvable
   if (!queue || i >= btns.length) {
+    if (queue) window.Progress?.queueDone(); // arrivé au bout de l'album
     queue = null;
     return syncQueue();
   }
@@ -877,6 +920,7 @@ function step(delta) {
   current = n;
   renderModal();
   setAlbumHash();
+  window.Progress?.seen(visible[current].id);
 }
 
 // ---------- Événements ----------
@@ -929,7 +973,13 @@ function bindEvents() {
   });
 
   // Plus fortes hausses : choix streams / %, et clic sur un morceau = sa fiche, titre surligné
-  document.querySelector("#gains-panel .ed-picker").addEventListener("click", (e) => {
+  $("#gains-period").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-period]");
+    if (!b || b.dataset.period === gainsPeriod) return;
+    gainsPeriod = b.dataset.period;
+    renderGains();
+  });
+  $("#gains-mode").addEventListener("click", (e) => {
     const b = e.target.closest("[data-gains]");
     if (!b || b.dataset.gains === gainsMode) return;
     gainsMode = b.dataset.gains;
@@ -1017,8 +1067,10 @@ function bindEvents() {
     if (e.target.closest("#share-btn")) return shareLink();
     const li = e.target.closest("#tracklist-wrap .tracklist li");
     if (!li || e.target.closest("button, a")) return;
+    if (e.target.closest(".tr-hist")) return; // clic dans la courbe du morceau
     if (li.classList.contains("hit-row")) {
       li.classList.remove("hit-row");
+      li.querySelector(".tr-hist")?.remove();
       setAlbumHash();
     } else focusTrack(rowTitle(li), { scroll: false });
   });

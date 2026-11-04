@@ -5,7 +5,7 @@ Fichiers modifiés :
   data/track-streams.js  streams de chaque morceau
   data/stats.js          streams de chaque album, total de la carrière, top morceaux, date du relevé
   data/history.js        une ligne de plus dans l'historique (courbes du site)
-  data/track-streams-prev.js  copie du relevé précédent des morceaux (« Plus fortes hausses »)
+  data/track-history.js  une colonne de plus dans l'historique de chaque morceau (hausses, courbes)
 
 Usage :
   python scripts/update_streams.py              # télécharge kworb et met à jour les fichiers
@@ -37,7 +37,7 @@ ROOT = Path(__file__).resolve().parent.parent
 TRACKS_JS = ROOT / "data" / "track-streams.js"
 STATS_JS = ROOT / "data" / "stats.js"
 HISTORY_JS = ROOT / "data" / "history.js"
-PREV_JS = ROOT / "data" / "track-streams-prev.js"
+TRACK_HISTORY_JS = ROOT / "data" / "track-history.js"
 
 ARTIST_ID = "5K4W6rqBFWDnAN6FQUkS6x"  # Kanye West sur Spotify
 SONGS_URL = f"https://kworb.net/spotify/artist/{ARTIST_ID}_songs.html"
@@ -258,24 +258,63 @@ def update_history(text: str, stats_text: str, today: dt.date, report: list[str]
     return nl.join(lines)
 
 
-PREV_HEADER = """// Relevé PRÉCÉDENT des streams Spotify par morceau : sert au classement « Plus fortes hausses ».
-// Écrit automatiquement par scripts/update_streams.py juste avant chaque nouveau relevé : ne pas modifier.
-// Même format que data/track-streams.js (clé = titre exact dans data/tracklists.js).
+TRACK_HISTORY_HEADER = """// Historique des streams Spotify de chaque morceau : un relevé par lundi, le plus ancien en premier.
+// Écrit automatiquement par scripts/update_streams.py à chaque mise à jour : ne pas modifier à la main.
+// dates  : date de chaque relevé
+// albums : id de l'album → titre exact (data/tracklists.js) → streams à chaque date (null = pas de chiffre ce jour-là)
+// Sert aux « Plus fortes hausses » (semaine, mois, depuis le début) et à la courbe de chaque morceau dans les fiches.
 """
 
 
-def make_prev(tracks_text: str, prev_date: str) -> str:
-    """Copie de l'ancien track-streams.js sous le nom TRACK_STREAMS_PREV, avec sa date."""
-    nl = "\r\n" if "\r\n" in tracks_text else "\n"
-    body = tracks_text[tracks_text.index("window.TRACK_STREAMS ="):]
-    body = body.replace("window.TRACK_STREAMS =", "window.TRACK_STREAMS_PREV =", 1)
-    head = PREV_HEADER.replace("\n", nl) + f'window.TRACK_STREAMS_PREV_DATE = "{prev_date}";{nl}'
-    return head + body
+def track_values(text: str) -> dict[str, dict[str, int]]:
+    """{ album: { titre: streams } } lus dans data/track-streams.js."""
+    out: dict[str, dict[str, int]] = {}
+    album = None
+    for line in text.splitlines():
+        m_album = re.match(r'^\s*"?([\w-]+)"?\s*:\s*\{\s*$', line)
+        if m_album:
+            album = m_album.group(1)
+            out.setdefault(album, {})
+            continue
+        m = re.match(r'^\s*"((?:[^"\\]|\\.)*)"\s*:\s*(\d+)', line)
+        if album and m:
+            out[album][json.loads('"' + m.group(1) + '"')] = int(m.group(2))
+    return out
 
 
-def releve_date(stats_text: str) -> str | None:
-    m = re.search(r'spotify:\s*\{\s*\n\s*date:\s*"([\d-]+)"', stats_text)
-    return m.group(1) if m else None
+def load_track_history(text: str | None) -> dict:
+    if not text or "{" not in text:
+        return {"dates": [], "albums": {}}
+    return json.loads(text[text.index("{"): text.rindex("}") + 1])
+
+
+def update_track_history(hist: dict, values: dict[str, dict[str, int]], day: str, report: list[str]) -> dict:
+    """Ajoute (ou remplace, si on relance le même jour) la colonne du jour."""
+    dates, albums = hist["dates"], hist["albums"]
+    if day in dates:
+        k = dates.index(day)
+    else:
+        dates.append(day)
+        k = len(dates) - 1
+        for series in (s for t in albums.values() for s in t.values()):
+            series.append(None)
+    for album, titres in values.items():
+        for titre, n in titres.items():
+            series = albums.setdefault(album, {}).setdefault(titre, [None] * len(dates))
+            series[k] = n
+    report.append(f"track-history.js : relevé du {day} ({len(dates)} relevés en tout)")
+    return hist
+
+
+def dump_track_history(hist: dict, nl: str = "\n") -> str:
+    """JSON lisible : une ligne par morceau, pour que chaque lundi ne change qu'un nombre par ligne."""
+    albums = []
+    for album, titres in hist["albums"].items():
+        rows = [f'      {json.dumps(t, ensure_ascii=False)}: {json.dumps(v)}' for t, v in titres.items()]
+        albums.append(f'    {json.dumps(album)}: {{{nl}' + f",{nl}".join(rows) + f"{nl}    }}")
+    body = (f'window.TRACK_HISTORY = {{{nl}  "dates": {json.dumps(hist["dates"])},{nl}  "albums": {{{nl}'
+            + f",{nl}".join(albums) + f"{nl}  }}{nl}}};{nl}")
+    return TRACK_HISTORY_HEADER.replace("\n", nl) + body
 
 
 # newline="" : on garde les fins de ligne du fichier telles quelles (CRLF sous Windows, LF sur GitHub)
@@ -309,22 +348,19 @@ def main() -> int:
     today = dt.date.today()
     report: list[str] = []
     old_tracks, old_stats = read(TRACKS_JS), read(STATS_JS)
-    # Le relevé qu'on va remplacer devient le « précédent » (sauf si on relance le même jour)
-    prev_date = releve_date(old_stats)
-    new_prev = make_prev(old_tracks, prev_date) if prev_date and prev_date != today.isoformat() else None
-    if new_prev:
-        report.append(f"track-streams-prev.js : relevé du {prev_date} gardé comme point de comparaison")
     new_tracks = update_tracks(old_tracks, songs, today, report)
     new_stats = update_stats(old_stats, total, songs, album_streams, today, report)
     new_history = update_history(read(HISTORY_JS), new_stats, today, report) if HISTORY_JS.exists() else None
+    old_th = read(TRACK_HISTORY_JS) if TRACK_HISTORY_JS.exists() else None
+    th = update_track_history(load_track_history(old_th), track_values(new_tracks), today.isoformat(), report)
+    new_track_history = dump_track_history(th, "\r\n" if old_th and "\r\n" in old_th else "\n")
     print("\n".join(report))
 
     if args.dry_run:
         print("(--dry-run : aucun fichier modifié)")
         return 0
-    if new_prev:
-        write(PREV_JS, new_prev)
     write(TRACKS_JS, new_tracks)
+    write(TRACK_HISTORY_JS, new_track_history)
     write(STATS_JS, new_stats)
     if new_history is not None:
         write(HISTORY_JS, new_history)

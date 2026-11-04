@@ -56,7 +56,9 @@ window.MiniPlayer = (() => {
     btn.dataset.state = mode;
     btn.textContent = mode === "idle" ? btn.dataset.label || "▶" : { load: "…", play: "❚❚", none: "—" }[mode];
     btn.title = mode === "none" ? "Extrait introuvable sur iTunes" : mode === "play" ? "Pause" : "Écouter un extrait";
-    btn.setAttribute("aria-label", btn.title);
+    // Le nom lu par un lecteur d'écran reprend le texte affiché (le numéro de piste) puis l'action
+    const num = mode === "idle" && /^\d+$/.test(btn.dataset.label || "") ? `${btn.dataset.label}. ` : "";
+    btn.setAttribute("aria-label", `${num}${btn.title}${btn.dataset.titre ? ` : ${btn.dataset.titre}` : ""}`);
     btn.disabled = mode === "none";
   }
   function stop() {

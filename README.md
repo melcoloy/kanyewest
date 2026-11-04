@@ -16,7 +16,9 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
 - **Liens directs** : `#album/graduation` ouvre la fiche, `#album/graduation/Stronger` la fiche avec le morceau surligné ;
   bouton « Partager » dans chaque fiche, clic sur un titre de la tracklist pour l'ajouter au lien
 - **Graphique** de la longueur des albums
-- **Plus fortes hausses** : les 10 morceaux qui ont gagné le plus de streams depuis le relevé précédent, en nombre ou en %, clic = la fiche sur le bon titre
+- **Plus fortes hausses** : les 10 morceaux qui ont gagné le plus de streams sur la semaine, le mois ou depuis le début du suivi
+  (au fil des relevés), en nombre ou en %, clic = la fiche sur le bon titre
+- **Courbe de chaque morceau** : clic sur un titre dans une fiche album = ses streams relevé après relevé
 - **Volume des extraits** : bouton 🔊 dans la barre d'onglets (curseur + couper le son), réglage gardé d'une visite à l'autre
 - **Mode clair / sombre** : suit le réglage du système, bouton ☀ / ☾ pour forcer l'un ou l'autre
 - **Fiches album** : ▶ sur chaque numéro de la tracklist pour écouter un extrait, et courbe des streams Spotify ;
@@ -36,6 +38,8 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
     - *Devine l'année* : place un morceau sur la frise 2004 → aujourd'hui
     - *Plus ou moins* : quel morceau a le plus de streams Spotify ?
     - *Qui est l'invité ?* : trouve l'artiste en featuring parmi 4 (2 pts sans écouter, 1 pt après l'extrait)
+    - *Ma progression* : records de chaque jeu, série du défi du jour, 18 badges à débloquer (notification au déblocage) ;
+      tout reste dans le navigateur
 - **Installable (PWA)** : « Installer l'application » dans le navigateur ; la discographie reste consultable hors ligne
 - **Aperçu de lien** : image et titre quand le lien est partagé (WhatsApp, Discord…)
 - **Streams mis à jour automatiquement** chaque lundi par GitHub Actions, avec historique pour les courbes (voir plus bas)
@@ -72,6 +76,7 @@ kanyewest/
 │   ├── invites.js         ← graphe des invités
 │   ├── samples.js         ← page Samples
 │   ├── tierlist.js        ← Mon classement (albums, morceaux, partage, top global)
+│   ├── progress.js        ← Ma progression (records, badges)
 │   ├── quicksearch.js     ← recherche rapide (/ ou Ctrl + K)
 │   ├── theme.js           ← mode clair / sombre
 │   └── tabs.js            ← navigation entre les onglets
@@ -81,7 +86,7 @@ kanyewest/
 │   ├── tracklists.js      ← tracklists : "Titre | Invités | Durée"
 │   ├── stats.js           ← ventes, certifications, streams des albums
 │   ├── track-streams.js   ← streams Spotify par morceau
-│   ├── track-streams-prev.js ← relevé précédent (écrit par le script, sert aux « Plus fortes hausses »)
+│   ├── track-history.js   ← historique des streams de chaque morceau (une colonne par lundi, écrit par le script)
 │   ├── history.js         ← historique des streams (une ligne par lundi)
 │   └── samples.js         ← liste des samples
 ├── scripts/update_streams.py           ← mise à jour des streams depuis kworb.net
@@ -112,7 +117,7 @@ Pour un lien direct : `liens: { spotify: "https://open.spotify.com/album/…" }`
 
 Chaque lundi matin, GitHub Actions lance `scripts/update_streams.py`, qui lit les pages kworb.net de Kanye,
 met à jour `data/track-streams.js` et `data/stats.js`, ajoute une ligne à `data/history.js` (les courbes),
-copie l'ancien relevé des morceaux dans `data/track-streams-prev.js` (les « Plus fortes hausses »),
+ajoute une colonne à `data/track-history.js` (historique de chaque morceau : hausses et courbes),
 puis commite le résultat.
 
 - Lancement manuel : onglet **Actions** du dépôt → *Mise à jour des streams* → *Run workflow*.
@@ -133,8 +138,10 @@ Les avertissements (`!`) signalent un détail à vérifier sans bloquer.
 Le même workflow (*Vérifications*) teste aussi le site dans un vrai navigateur : `scripts/smoke_test.js` l'ouvre
 dans Chromium et passe sur tous les onglets, les jeux, les fiches album, les liens directs et la recherche rapide,
 sur ordinateur et sur mobile. Il échoue à la moindre erreur JavaScript, si un élément attendu manque ou si la page
-déborde sur le côté. Les pochettes et extraits d'Apple sont coupés pendant le test (résultat identique à chaque fois).
-En local : `npm install --no-save playwright && npx playwright install chromium`, puis `node scripts/smoke_test.js`.
+déborde sur le côté. Il vérifie aussi l'**accessibilité** de chaque vue, en thème sombre et clair, avec axe-core
+(règles WCAG 2.1 A et AA : contrastes, noms des boutons, rôles…). Les pochettes et extraits d'Apple sont coupés
+pendant le test (résultat identique à chaque fois).
+En local : `npm install --no-save playwright axe-core && npx playwright install chromium`, puis `node scripts/smoke_test.js`.
 
 ## Aperçu de lien
 

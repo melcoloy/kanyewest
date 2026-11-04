@@ -165,9 +165,12 @@
             <h3>Plus fortes hausses</h3>
             <p class="muted panel-sub" id="gains-sub"></p>
           </div>
-          <div class="ed-picker" role="group" aria-label="Classer les hausses">
-            <button class="ed-btn active" data-gains="abs" aria-pressed="true">En streams</button>
-            <button class="ed-btn" data-gains="pct" aria-pressed="false">En %</button>
+          <div class="gains-pickers">
+            <div class="ed-picker" id="gains-period" role="group" aria-label="Période" hidden></div>
+            <div class="ed-picker" id="gains-mode" role="group" aria-label="Classer les hausses">
+              <button class="ed-btn active" data-gains="abs" aria-pressed="true">En streams</button>
+              <button class="ed-btn" data-gains="pct" aria-pressed="false">En %</button>
+            </div>
           </div>
         </div>
         <ol class="gains" id="gains"></ol>
@@ -249,6 +252,7 @@
       <button class="subtab" data-sub="annee"><b>Devine l'année</b><span>Place le morceau sur la frise</span></button>
       <button class="subtab" data-sub="plus-ou-moins"><b>Plus ou moins</b><span>Lequel a le plus de streams ?</span></button>
       <button class="subtab" data-sub="invite"><b>Qui est l'invité ?</b><span>Trouve le featuring</span></button>
+      <button class="subtab subtab-pg" data-sub="progression"><b>Ma progression</b><span>Records et badges 🏆</span></button>
     </nav>
 
     <section class="game-section game-pane" data-pane="blind-test" aria-labelledby="bt-title" hidden>
@@ -280,6 +284,12 @@
       <p class="muted section-sub">Un morceau, quatre artistes : lequel est en featuring ? Réponds sans écouter pour 2 points, ou lance l'extrait pour t'aider (1 point).</p>
       <div class="bt" id="quiz-invites"></div>
     </section>
+
+    <section class="game-section game-pane" data-pane="progression" aria-labelledby="pg-title" hidden>
+      <h2 id="pg-title">Ma progression</h2>
+      <p class="muted section-sub">Tes records dans chaque jeu, ta série au défi du jour et les badges à débloquer en jouant et en explorant le site.</p>
+      <div id="progression"></div>
+    </section>
   </main>
 
   <dialog id="modal">
@@ -300,7 +310,7 @@
   <script src="data/tracklists.js"></script>
   <script src="data/stats.js"></script>
   <script src="data/track-streams.js"></script>
-  <script src="data/track-streams-prev.js"></script>
+  <script src="data/track-history.js"></script>
   <script src="data/samples.js"></script>
   <script src="data/history.js"></script>
   <script src="js/covers.js"></script>
@@ -317,6 +327,7 @@
   <script src="js/invites.js"></script>
   <script src="js/samples.js"></script>
   <script src="js/tierlist.js"></script>
+  <script src="js/progress.js"></script>
   <script src="js/quicksearch.js"></script>
   <script src="js/theme.js"></script>
   <script src="js/tabs.js"></script>
