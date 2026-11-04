@@ -76,7 +76,9 @@ kanyewest/
 │   ├── history.js         ← historique des streams (une ligne par lundi)
 │   └── samples.js         ← liste des samples
 ├── scripts/update_streams.py           ← mise à jour des streams depuis kworb.net
-└── .github/workflows/update-streams.yml ← lance le script chaque lundi
+├── scripts/check_data.js              ← vérification des données (node scripts/check_data.js)
+├── .github/workflows/update-streams.yml ← lance le script chaque lundi
+└── .github/workflows/check-data.yml     ← vérifie les données à chaque push
 ```
 
 Pour ajouter un album : un objet dans `data/albums.js` et sa tracklist dans `data/tracklists.js` (même `id`).
@@ -108,6 +110,15 @@ puis commite le résultat.
 - En local : `python scripts/update_streams.py --dry-run` (affiche les changements sans rien écrire).
 - Le script met à jour les morceaux déjà présents, sans en ajouter. Il ignore une valeur qui baisse ou qui explose.
   *Kids See Ghosts* (publié sous un autre nom d'artiste) et *Vultures 2* restent à mettre à jour à la main.
+
+## Vérification des données
+
+`node scripts/check_data.js` contrôle que tout se tient : ids d'albums identiques d'un fichier à l'autre,
+durées au format `3:21`, titres de `track-streams.js` et `samples.js` présents dans les tracklists, dates valides,
+fichiers du site bien listés dans `sw.js`… GitHub Actions le lance à chaque push (onglet **Actions** →
+*Vérification des données*, une croix rouge = une erreur à corriger, le détail est dans le journal) et après
+la mise à jour des streams du lundi (si le contrôle échoue, rien n'est commité).
+Les avertissements (`!`) signalent un détail à vérifier sans bloquer.
 
 ## Aperçu de lien
 

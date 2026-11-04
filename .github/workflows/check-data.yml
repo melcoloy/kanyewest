@@ -1,0 +1,25 @@
+# Vérifie la cohérence des données (albums, tracklists, streams, samples, fichiers hors ligne)
+# à chaque push et à chaque pull request. En cas d'erreur, le détail est dans le journal
+# de l'étape « Vérifier les données ». En local : node scripts/check_data.js
+name: Vérification des données
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Vérifier les données
+        run: node scripts/check_data.js
