@@ -32,6 +32,7 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
     - *Pochette floue* : devine l'album d'après sa pochette pixelisée
     - *Devine l'année* : place un morceau sur la frise 2004 → aujourd'hui
     - *Plus ou moins* : quel morceau a le plus de streams Spotify ?
+    - *Qui est l'invité ?* : trouve l'artiste en featuring parmi 4 (2 pts sans écouter, 1 pt après l'extrait)
 - **Installable (PWA)** : « Installer l'application » dans le navigateur ; la discographie reste consultable hors ligne
 - **Aperçu de lien** : image et titre quand le lien est partagé (WhatsApp, Discord…)
 - **Streams mis à jour automatiquement** chaque lundi par GitHub Actions, avec historique pour les courbes (voir plus bas)
@@ -61,6 +62,8 @@ kanyewest/
 │   ├── player.js          ← mini-lecteur d'extraits (fiches, samples, devine l'année)
 │   ├── blindtest.js       ← blind test (solo, chrono, duel) + défi du jour
 │   ├── jeux.js            ← pochette floue + devine l'année
+│   ├── quiz-invites.js    ← jeu « Qui est l'invité ? »
+│   ├── share.js           ← partage des scores des jeux
 │   ├── game.js            ← jeu « Plus ou moins »
 │   ├── comparer.js        ← comparateur d'albums
 │   ├── invites.js         ← graphe des invités

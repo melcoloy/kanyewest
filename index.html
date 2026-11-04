@@ -248,6 +248,7 @@
       <button class="subtab" data-sub="pochette"><b>Pochette floue</b><span>Devine l'album pixelisé</span></button>
       <button class="subtab" data-sub="annee"><b>Devine l'année</b><span>Place le morceau sur la frise</span></button>
       <button class="subtab" data-sub="plus-ou-moins"><b>Plus ou moins</b><span>Lequel a le plus de streams ?</span></button>
+      <button class="subtab" data-sub="invite"><b>Qui est l'invité ?</b><span>Trouve le featuring</span></button>
     </nav>
 
     <section class="game-section game-pane" data-pane="blind-test" aria-labelledby="bt-title" hidden>
@@ -272,6 +273,12 @@
       <h2 id="jeu-title">Plus ou moins</h2>
       <p class="muted section-sub">Le deuxième morceau a-t-il plus ou moins de streams Spotify que le premier ? Enchaîne les bonnes réponses.</p>
       <div class="game" id="game"></div>
+    </section>
+
+    <section class="game-section game-pane" data-pane="invite" aria-labelledby="qi-title" hidden>
+      <h2 id="qi-title">Qui est l'invité ?</h2>
+      <p class="muted section-sub">Un morceau, quatre artistes : lequel est en featuring ? Réponds sans écouter pour 2 points, ou lance l'extrait pour t'aider (1 point).</p>
+      <div class="bt" id="quiz-invites"></div>
     </section>
   </main>
 
@@ -302,8 +309,10 @@
   <script src="js/game.js"></script>
   <script src="js/volume.js"></script>
   <script src="js/player.js"></script>
+  <script src="js/share.js"></script>
   <script src="js/blindtest.js"></script>
   <script src="js/jeux.js"></script>
+  <script src="js/quiz-invites.js"></script>
   <script src="js/comparer.js"></script>
   <script src="js/invites.js"></script>
   <script src="js/samples.js"></script>
