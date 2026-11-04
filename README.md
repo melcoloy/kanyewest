@@ -86,8 +86,9 @@ kanyewest/
 │   └── samples.js         ← liste des samples
 ├── scripts/update_streams.py           ← mise à jour des streams depuis kworb.net
 ├── scripts/check_data.js              ← vérification des données (node scripts/check_data.js)
+├── scripts/smoke_test.js              ← test du site dans un navigateur (Playwright)
 ├── .github/workflows/update-streams.yml ← lance le script chaque lundi
-└── .github/workflows/check-data.yml     ← vérifie les données à chaque push
+└── .github/workflows/check-data.yml     ← vérifie les données et teste le site à chaque push
 ```
 
 Pour ajouter un album : un objet dans `data/albums.js` et sa tracklist dans `data/tracklists.js` (même `id`).
@@ -128,6 +129,12 @@ fichiers du site bien listés dans `sw.js`… GitHub Actions le lance à chaque 
 *Vérification des données*, une croix rouge = une erreur à corriger, le détail est dans le journal) et après
 la mise à jour des streams du lundi (si le contrôle échoue, rien n'est commité).
 Les avertissements (`!`) signalent un détail à vérifier sans bloquer.
+
+Le même workflow (*Vérifications*) teste aussi le site dans un vrai navigateur : `scripts/smoke_test.js` l'ouvre
+dans Chromium et passe sur tous les onglets, les jeux, les fiches album, les liens directs et la recherche rapide,
+sur ordinateur et sur mobile. Il échoue à la moindre erreur JavaScript, si un élément attendu manque ou si la page
+déborde sur le côté. Les pochettes et extraits d'Apple sont coupés pendant le test (résultat identique à chaque fois).
+En local : `npm install --no-save playwright && npx playwright install chromium`, puis `node scripts/smoke_test.js`.
 
 ## Aperçu de lien
 
