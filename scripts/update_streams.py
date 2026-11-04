@@ -5,6 +5,7 @@ Fichiers modifiés :
   data/track-streams.js  streams de chaque morceau
   data/stats.js          streams de chaque album, total de la carrière, top morceaux, date du relevé
   data/history.js        une ligne de plus dans l'historique (courbes du site)
+  data/track-streams-prev.js  copie du relevé précédent des morceaux (« Plus fortes hausses »)
 
 Usage :
   python scripts/update_streams.py              # télécharge kworb et met à jour les fichiers
@@ -36,6 +37,7 @@ ROOT = Path(__file__).resolve().parent.parent
 TRACKS_JS = ROOT / "data" / "track-streams.js"
 STATS_JS = ROOT / "data" / "stats.js"
 HISTORY_JS = ROOT / "data" / "history.js"
+PREV_JS = ROOT / "data" / "track-streams-prev.js"
 
 ARTIST_ID = "5K4W6rqBFWDnAN6FQUkS6x"  # Kanye West sur Spotify
 SONGS_URL = f"https://kworb.net/spotify/artist/{ARTIST_ID}_songs.html"
@@ -256,6 +258,26 @@ def update_history(text: str, stats_text: str, today: dt.date, report: list[str]
     return nl.join(lines)
 
 
+PREV_HEADER = """// Relevé PRÉCÉDENT des streams Spotify par morceau : sert au classement « Plus fortes hausses ».
+// Écrit automatiquement par scripts/update_streams.py juste avant chaque nouveau relevé : ne pas modifier.
+// Même format que data/track-streams.js (clé = titre exact dans data/tracklists.js).
+"""
+
+
+def make_prev(tracks_text: str, prev_date: str) -> str:
+    """Copie de l'ancien track-streams.js sous le nom TRACK_STREAMS_PREV, avec sa date."""
+    nl = "\r\n" if "\r\n" in tracks_text else "\n"
+    body = tracks_text[tracks_text.index("window.TRACK_STREAMS ="):]
+    body = body.replace("window.TRACK_STREAMS =", "window.TRACK_STREAMS_PREV =", 1)
+    head = PREV_HEADER.replace("\n", nl) + f'window.TRACK_STREAMS_PREV_DATE = "{prev_date}";{nl}'
+    return head + body
+
+
+def releve_date(stats_text: str) -> str | None:
+    m = re.search(r'spotify:\s*\{\s*\n\s*date:\s*"([\d-]+)"', stats_text)
+    return m.group(1) if m else None
+
+
 # newline="" : on garde les fins de ligne du fichier telles quelles (CRLF sous Windows, LF sur GitHub)
 def read(path: Path) -> str:
     with open(path, encoding="utf-8", newline="") as f:
@@ -286,14 +308,22 @@ def main() -> int:
 
     today = dt.date.today()
     report: list[str] = []
-    new_tracks = update_tracks(read(TRACKS_JS), songs, today, report)
-    new_stats = update_stats(read(STATS_JS), total, songs, album_streams, today, report)
+    old_tracks, old_stats = read(TRACKS_JS), read(STATS_JS)
+    # Le relevé qu'on va remplacer devient le « précédent » (sauf si on relance le même jour)
+    prev_date = releve_date(old_stats)
+    new_prev = make_prev(old_tracks, prev_date) if prev_date and prev_date != today.isoformat() else None
+    if new_prev:
+        report.append(f"track-streams-prev.js : relevé du {prev_date} gardé comme point de comparaison")
+    new_tracks = update_tracks(old_tracks, songs, today, report)
+    new_stats = update_stats(old_stats, total, songs, album_streams, today, report)
     new_history = update_history(read(HISTORY_JS), new_stats, today, report) if HISTORY_JS.exists() else None
     print("\n".join(report))
 
     if args.dry_run:
         print("(--dry-run : aucun fichier modifié)")
         return 0
+    if new_prev:
+        write(PREV_JS, new_prev)
     write(TRACKS_JS, new_tracks)
     write(STATS_JS, new_stats)
     if new_history is not None:

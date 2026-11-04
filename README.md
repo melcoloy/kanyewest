@@ -10,6 +10,7 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
 - **Filtres** par année, par album, solo / collaborations, et **tri** (date, classement, longueur)
 - **Fiche détaillée** par album : date, label, place au Billboard 200, titres clés, distinctions, lien Apple Music — navigation avec ← →
 - **Graphique** de la longueur des albums
+- **Plus fortes hausses** : les 10 morceaux qui ont gagné le plus de streams depuis le relevé précédent, en nombre ou en %, clic = la fiche sur le bon titre
 - **Mode clair / sombre** : suit le réglage du système, bouton ☀ / ☾ pour forcer l'un ou l'autre
 - **Fiches album** : ▶ sur chaque numéro de la tracklist pour écouter un extrait, et courbe des streams Spotify
 - **Onglets** (lien direct possible : `#comparer`, `#samples`, `#invites`, `#classement`, `#defi`, `#jeux/…`) :
@@ -65,6 +66,7 @@ kanyewest/
 │   ├── tracklists.js      ← tracklists : "Titre | Invités | Durée"
 │   ├── stats.js           ← ventes, certifications, streams des albums
 │   ├── track-streams.js   ← streams Spotify par morceau
+│   ├── track-streams-prev.js ← relevé précédent (écrit par le script, sert aux « Plus fortes hausses »)
 │   ├── history.js         ← historique des streams (une ligne par lundi)
 │   └── samples.js         ← liste des samples
 ├── scripts/update_streams.py           ← mise à jour des streams depuis kworb.net
@@ -92,6 +94,7 @@ Pour un lien direct : `liens: { spotify: "https://open.spotify.com/album/…" }`
 
 Chaque lundi matin, GitHub Actions lance `scripts/update_streams.py`, qui lit les pages kworb.net de Kanye,
 met à jour `data/track-streams.js` et `data/stats.js`, ajoute une ligne à `data/history.js` (les courbes),
+copie l'ancien relevé des morceaux dans `data/track-streams-prev.js` (les « Plus fortes hausses »),
 puis commite le résultat.
 
 - Lancement manuel : onglet **Actions** du dépôt → *Mise à jour des streams* → *Run workflow*.
