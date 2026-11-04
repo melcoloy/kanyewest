@@ -31,30 +31,37 @@
   <header class="hero">
     <button class="theme-btn" id="theme-btn" aria-label="Passer en mode clair">☀</button>
     <div class="hero-brand">
-      <!-- Logo : un vinyle avec « YE » sur l'étiquette (même identité que l'icône de l'application) -->
-      <svg class="logo" viewBox="0 0 120 120" role="img" aria-label="Logo : vinyle YE">
+      <!-- Logo : un ours avec une toque de diplômé (dessin original, clin d'œil aux premiers albums) -->
+      <svg class="logo" viewBox="0 0 120 120" role="img" aria-label="Logo : ours avec une toque de diplômé">
         <defs>
-          <radialGradient id="logo-disc" cx="50%" cy="50%" r="50%">
-            <stop offset="0" stop-color="#1c1c1f" /><stop offset=".85" stop-color="#0d0d0f" /><stop offset="1" stop-color="#1a1a1d" />
+          <radialGradient id="bear-fur" cx="42%" cy="35%" r="70%">
+            <stop offset="0" stop-color="#a8693a" /><stop offset=".7" stop-color="#7b4a26" /><stop offset="1" stop-color="#5e371b" />
           </radialGradient>
-          <linearGradient id="logo-shine" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#fff" stop-opacity=".22" /><stop offset=".45" stop-color="#fff" stop-opacity="0" />
-            <stop offset=".55" stop-color="#fff" stop-opacity="0" /><stop offset="1" stop-color="#fff" stop-opacity=".12" />
-          </linearGradient>
-          <linearGradient id="logo-label" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#f3d68c" /><stop offset="1" stop-color="#b8892e" />
+          <linearGradient id="bear-cap" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#f3d68c" /><stop offset="1" stop-color="#c29534" />
           </linearGradient>
         </defs>
-        <g class="logo-spin">
-          <circle cx="60" cy="60" r="58" fill="url(#logo-disc)" stroke="#e4c06a" stroke-opacity=".55" stroke-width="1.5" />
-          <g fill="none" stroke="#fff" stroke-opacity=".07">
-            <circle cx="60" cy="60" r="52" /><circle cx="60" cy="60" r="47" /><circle cx="60" cy="60" r="42" />
-            <circle cx="60" cy="60" r="37" /><circle cx="60" cy="60" r="32" />
+        <g class="logo-bob">
+          <!-- oreilles -->
+          <circle cx="27" cy="44" r="15" fill="#6e4120" /><circle cx="27" cy="44" r="8.5" fill="#d9a877" />
+          <circle cx="93" cy="44" r="15" fill="#6e4120" /><circle cx="93" cy="44" r="8.5" fill="#d9a877" />
+          <!-- tête -->
+          <ellipse cx="60" cy="72" rx="41" ry="37" fill="url(#bear-fur)" />
+          <!-- museau, nez, bouche -->
+          <ellipse cx="60" cy="88" rx="19" ry="14" fill="#e2b88a" />
+          <ellipse cx="60" cy="81" rx="6.5" ry="4.5" fill="#2a160b" />
+          <path d="M60 85.5v4.5m0 0c-2 3-5.5 3.5-8 1.5m8-1.5c2 3 5.5 3.5 8 1.5" fill="none" stroke="#2a160b" stroke-width="2" stroke-linecap="round" />
+          <!-- yeux -->
+          <g class="logo-eyes">
+            <circle cx="45" cy="66" r="5.2" fill="#1a0f08" /><circle cx="46.8" cy="64.2" r="1.7" fill="#fff" />
+            <circle cx="75" cy="66" r="5.2" fill="#1a0f08" /><circle cx="76.8" cy="64.2" r="1.7" fill="#fff" />
           </g>
-          <circle cx="60" cy="60" r="58" fill="url(#logo-shine)" />
-          <circle cx="60" cy="60" r="24" fill="url(#logo-label)" />
-          <text x="60" y="64" text-anchor="middle" font-family="Archivo Black, Inter, sans-serif" font-size="15" fill="#141416">YE</text>
-          <rect x="50" y="67.5" width="20" height="2" rx="1" fill="#141416" />
+          <!-- toque de diplômé -->
+          <path d="M41 30h38v9c-6 3.5-32 3.5-38 0z" fill="#8f6a20" />
+          <polygon points="60,11 101,24 60,37 19,24" fill="url(#bear-cap)" />
+          <circle cx="60" cy="24" r="2.4" fill="#8f6a20" />
+          <path d="M60 24 L93 27.5 V43" fill="none" stroke="#8f6a20" stroke-width="2" stroke-linecap="round" />
+          <rect x="90" y="42" width="6" height="9" rx="2" fill="#8f6a20" />
         </g>
       </svg>
       <div>
