@@ -27,7 +27,7 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
   - **Mon classement** : tier list S → D des albums ou des morceaux de chaque album, export en image,
     partage par lien (l'ami voit ton classement au-dessus du sien) et « Mon top global » (tous tes sons en S et A)
   - **Défi du jour** : 5 morceaux, les mêmes pour tout le monde chaque jour ; série de jours et résultat à partager en emojis
-  - **Jeux** :
+  - **Jeux** (bouton « Partager mon score » en fin de partie : grille d'emojis + lien, comme le défi du jour) :
     - *Blind test* : retrouve le morceau ou l'album à partir d'un extrait de 2 à 20 s — 10 manches, contre la montre (60 s) ou en duel à deux sur le même écran (buzzers A et L)
     - *Pochette floue* : devine l'album d'après sa pochette pixelisée
     - *Devine l'année* : place un morceau sur la frise 2004 → aujourd'hui

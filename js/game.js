@@ -32,6 +32,7 @@
   // ---- État
   let left, right, score = 0, locked = false, recent = [];
   let best = 0;
+  let shareText = ""; // résultat de la dernière partie, à partager
   try { best = +localStorage.getItem(BEST_KEY) || 0; } catch {}
 
   const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -142,9 +143,14 @@
             <p class="g-over-title">${record && score > 0 ? "Nouveau record !" : "Perdu"}</p>
             <p>«\u00a0${escapeHtml(right.titre)}\u00a0» a ${fmtNb(right.streams)} streams, contre ${fmtNb(left.streams)} pour «\u00a0${escapeHtml(left.titre)}\u00a0».</p>
             <p>Score : <b>${score}</b> · Record : <b>${best}</b></p>
-            <button class="g-btn" id="g-replay">Rejouer</button>
+            <div class="g-btns"><button class="g-btn" id="g-replay">Rejouer</button>${ShareResult.button()}</div>
           </div>`
         );
+        shareText = ShareResult.text({
+          jeu: "Plus ou moins",
+          score: `${score} bonne${score > 1 ? "s" : ""} réponse${score > 1 ? "s" : ""} d'affilée${record && score ? " (nouveau record !)" : ` (record : ${best})`}`,
+          vue: "jeux/plus-ou-moins",
+        });
         document.getElementById("g-replay").focus();
       }
     }, 1500);
@@ -154,6 +160,8 @@
     const b = e.target.closest("[data-guess]");
     if (b) return guess(b.dataset.guess);
     if (e.target.closest("#g-replay")) start();
+    const sh = e.target.closest('[data-act="share-result"]');
+    if (sh) ShareResult.share(shareText, sh);
   });
 
   // Une pochette arrive : on rafraîchit si elle concerne un des deux morceaux affichés
