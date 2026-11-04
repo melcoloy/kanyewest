@@ -69,7 +69,7 @@
             ({ a, items }) => `
         <section class="sm-group">
           <button class="sm-album" data-album="${a.id}">
-            <span class="sm-cov" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img src="${covers[a.id].img}" alt="">` : ""}</span>
+            <span class="sm-cov" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img loading="lazy" decoding="async" src="${covers[a.id].img}" alt="">` : ""}</span>
             <span><b>${escapeHtml(a.titre)}</b><span class="muted">${a.date.slice(0, 4)}</span></span>
           </button>
           <div class="sm-cards">
@@ -111,8 +111,9 @@
   document.addEventListener("cover-loaded", (e) => {
     const img = covers[e.detail]?.img;
     const cov = root.querySelector(`.sm-album[data-album="${e.detail}"] .sm-cov`);
-    if (img && cov && !cov.querySelector("img")) cov.innerHTML = `<img src="${img}" alt="">`;
+    if (img && cov && !cov.querySelector("img")) cov.innerHTML = `<img loading="lazy" decoding="async" src="${img}" alt="">`;
   });
 
-  renderShell();
+  // Préparé à la première ouverture de l'onglet (démarrage plus rapide)
+  window.onTabOpen("samples", renderShell);
 })();

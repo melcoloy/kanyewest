@@ -33,7 +33,9 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
     partage par lien (l'ami voit ton classement au-dessus du sien) et « Mon top global » (tous tes sons en S et A)
   - **Défi du jour** : 5 morceaux, les mêmes pour tout le monde chaque jour ; série de jours et résultat à partager en emojis
   - **Jeux** (bouton « Partager mon score » en fin de partie : grille d'emojis + lien, comme le défi du jour) :
-    - *Blind test* : retrouve le morceau ou l'album à partir d'un extrait de 2 à 20 s — 10 manches, contre la montre (60 s) ou en duel à deux sur le même écran (buzzers A et L)
+    - *Blind test* : retrouve le morceau ou l'album à partir d'un extrait de 2 à 20 s — 10 manches, contre la montre (60 s) ou en duel à deux sur le même écran (buzzers A et L) ;
+      **duel à distance** : après une partie de 10 manches, « Défier un ami » crée un lien (`?duel=…`) avec lequel l'ami
+      rejoue exactement les mêmes morceaux et propositions, puis voit vos deux scores manche par manche et peut renvoyer le défi
     - *Pochette floue* : devine l'album d'après sa pochette pixelisée
     - *Devine l'année* : place un morceau sur la frise 2004 → aujourd'hui
     - *Plus ou moins* : quel morceau a le plus de streams Spotify ?
@@ -142,6 +144,15 @@ déborde sur le côté. Il vérifie aussi l'**accessibilité** de chaque vue, en
 (règles WCAG 2.1 A et AA : contrastes, noms des boutons, rôles…). Les pochettes et extraits d'Apple sont coupés
 pendant le test (résultat identique à chaque fois).
 En local : `npm install --no-save playwright axe-core && npx playwright install chromium`, puis `node scripts/smoke_test.js`.
+
+## Vitesse de chargement
+
+- Les polices Google se chargent sans bloquer le premier affichage (le texte apparaît tout de suite).
+- Les onglets cachés (Invités, Samples, Comparer, Mon classement) se préparent la première fois qu'on les ouvre ;
+  pour un nouvel onglet, enregistrer sa préparation avec `window.onTabOpen("nom-de-l-onglet", init)` (js/app.js).
+- Les stats du bas de page se dessinent à l'approche ou quand le navigateur est libre (`ensureStats()`).
+- Les pochettes des listes ne se téléchargent qu'à l'approche (`loading="lazy"`) ; le mur de l'en-tête n'en charge
+  aucune sur petit écran, où il est masqué.
 
 ## Aperçu de lien
 

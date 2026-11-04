@@ -55,7 +55,7 @@
     const head = (x, i) => `
       <div class="cmp-head">
         <button class="cmp-cov" data-album="${x.id}" style="background:${gradient(x.palette)}">
-          ${covers[x.id]?.img ? `<img src="${covers[x.id].img}" alt="">` : `<span aria-hidden="true">${initials(x.titre)}</span>`}
+          ${covers[x.id]?.img ? `<img loading="lazy" decoding="async" src="${covers[x.id].img}" alt="">` : `<span aria-hidden="true">${initials(x.titre)}</span>`}
           <span class="visually-hidden">Ouvrir ${escapeHtml(x.titre)}</span>
         </button>
         <select class="cmp-select" data-side="${i}" aria-label="Album ${i + 1}">${options(x.id)}</select>
@@ -106,7 +106,7 @@
   });
   // Pochettes qui arrivent, classement modifié dans l'autre onglet
   let t = 0;
-  document.addEventListener("cover-loaded", () => { clearTimeout(t); t = setTimeout(render, 200); });
+  // Dessiné à l'ouverture de l'onglet ; les pochettes qui arrivent ne le redessinent que s'il est affiché
+  document.addEventListener("cover-loaded", () => { clearTimeout(t); t = setTimeout(() => window.currentTab?.() === "comparer" && render(), 200); });
   document.addEventListener("tab-change", (e) => { if (e.detail === "comparer") render(); });
-  render();
 })();

@@ -133,7 +133,7 @@ function renderAnniv() {
       const round = age % 5 === 0;
       return `
     <button class="anniv${days === 0 ? " today" : ""}${round ? " round" : ""}" data-id="${a.id}">
-      <span class="hit-cov" style="background:${gradient(a.palette)}">${covers[a.id] ? `<img src="${covers[a.id].img}" alt="">` : initials(a.titre)}</span>
+      <span class="hit-cov" style="background:${gradient(a.palette)}">${covers[a.id] ? `<img loading="lazy" decoding="async" src="${covers[a.id].img}" alt="">` : initials(a.titre)}</span>
       <span class="anniv-main">
         <span class="anniv-kicker">${days === 0 || round ? "🎂 " : ""}${kicker}</span>
         <span class="anniv-text">${text}</span>
@@ -258,7 +258,7 @@ function renderTrackHits() {
       ({ a, x, n, ed }) => `
     <li>
       <button class="hit" data-id="${a.id}" data-titre="${escapeHtml(x.titre)}"${ed ? ` data-ed="${ed.id}"` : ""}>
-        <span class="hit-cov" style="background:${gradient(a.palette)}">${covers[a.id] ? `<img src="${covers[a.id].img}" alt="" loading="lazy">` : initials(a.titre)}</span>
+        <span class="hit-cov" style="background:${gradient(a.palette)}">${covers[a.id] ? `<img loading="lazy" decoding="async" src="${covers[a.id].img}" alt="" loading="lazy">` : initials(a.titre)}</span>
         <span class="hit-main">
           <span class="hit-title">${highlight(x.titre)}${ed ? ` <span class="tag new">${escapeHtml(ed.nom)}</span>` : ""}</span>
           ${x.feats.length ? `<span class="hit-feat">feat. ${x.feats.map(highlight).join(", ")}</span>` : ""}
@@ -318,7 +318,7 @@ function renderGrid() {
         (a) => `
       <button class="card" data-id="${a.id}">
         <div class="cover${covers[a.id] ? " has-img" : ""}" style="background:${gradient(a.palette)}">
-          ${covers[a.id] ? `<img src="${covers[a.id].img}" alt="Pochette de ${escapeHtml(a.titre)}" loading="lazy">` : ""}
+          ${covers[a.id] ? `<img loading="lazy" decoding="async" src="${covers[a.id].img}" alt="Pochette de ${escapeHtml(a.titre)}" loading="lazy">` : ""}
           <span class="badge">${a.type === "collab" ? "Collab" : "Solo"} · ${escapeHtml(a.ere)}</span>
           <span class="cover-letters">${initials(a.titre)}</span>
           <span class="cover-year">${year(a.date)}</span>
@@ -455,7 +455,7 @@ function renderStatsTable() {
       .map((a) => {
         const st = S.albums[a.id] || {};
         return `<tr data-id="${a.id}" tabindex="0">
-          <td class="t-album">${covers[a.id] ? `<img src="${covers[a.id].img}" alt="">` : `<span class="t-dot" style="background:${gradient(a.palette)}"></span>`}${escapeHtml(a.titre)}</td>
+          <td class="t-album">${covers[a.id] ? `<img loading="lazy" decoding="async" src="${covers[a.id].img}" alt="">` : `<span class="t-dot" style="background:${gradient(a.palette)}"></span>`}${escapeHtml(a.titre)}</td>
           <td class="num">${year(a.date)}</td>
           <td class="num">${a.billboard ? "n° " + a.billboard : "—"}</td>
           <td class="num">${st.premiereSemaine ? fmtNb(st.premiereSemaine) : "—"}</td>
@@ -622,7 +622,7 @@ function renderGains() {
     <li>
       <button class="hit gain" data-id="${g.a.id}" data-titre="${escapeHtml(g.titre)}">
         <span class="sp-rank">${i + 1}</span>
-        <span class="hit-cov" style="background:${gradient(g.a.palette)}">${covers[g.a.id] ? `<img src="${covers[g.a.id].img}" alt="" loading="lazy">` : initials(g.a.titre)}</span>
+        <span class="hit-cov" style="background:${gradient(g.a.palette)}">${covers[g.a.id] ? `<img loading="lazy" decoding="async" src="${covers[g.a.id].img}" alt="" loading="lazy">` : initials(g.a.titre)}</span>
         <span class="hit-main">
           <span class="hit-title">${escapeHtml(g.titre)}</span>
           <span class="hit-album">${escapeHtml(g.a.titre)} · ${year(g.a.date)}</span>
@@ -1117,6 +1117,34 @@ function bindEvents() {
   });
 }
 
+// ---------- Démarrage plus rapide ----------
+// Les onglets cachés se préparent la première fois qu'on les ouvre : window.onTabOpen("invites", init)
+const tabInits = [];
+window.onTabOpen = (tab, fn) => tabInits.push({ tab, fn });
+document.addEventListener("tab-change", (e) => {
+  const tab = String(e.detail).split("/")[0];
+  for (let i = tabInits.length - 1; i >= 0; i--) if (tabInits[i].tab === tab) tabInits.splice(i, 1)[0].fn();
+});
+
+// Les stats sont en bas de page : on les dessine quand on s'en approche, ou dès que le navigateur est libre
+let statsDone = false;
+function ensureStats() {
+  if (statsDone) return;
+  statsDone = true;
+  renderStatsSection();
+}
+window.ensureStats = ensureStats;
+function scheduleStats() {
+  const el = document.querySelector(".stats-section");
+  if (el && "IntersectionObserver" in window) {
+    const io = new IntersectionObserver((es) => {
+      if (es.some((x) => x.isIntersecting)) { io.disconnect(); ensureStats(); }
+    }, { rootMargin: "800px 0px" });
+    io.observe(el);
+  }
+  (window.requestIdleCallback || ((f) => setTimeout(f, 1200)))(ensureStats, { timeout: 2500 });
+}
+
 // ---------- Init ----------
 window.addEventListener("DOMContentLoaded", openFromHash);
 renderAnniv();
@@ -1124,7 +1152,7 @@ renderStats();
 renderTimeline();
 renderFilterOptions();
 renderGrid();
-renderStatsSection();
+scheduleStats();
 bindEvents();
 
 // Mur de pochettes de l'en-tête : 24 cases (3 rangées de 8), dégradé de l'album en attendant sa pochette
@@ -1137,7 +1165,13 @@ function renderHeroWall() {
     .map((a, i) => `<span class="wall-tile" data-id="${a.id}" style="background:${gradient(a.palette)};animation-delay:${(i % 8) * 0.05 + Math.floor(i / 8) * 0.1}s">${initials(a.titre)}</span>`)
     .join("");
 }
+// Le mur est masqué sur petit écran : pas la peine d'y télécharger les pochettes
+const wallShown = () => matchMedia("(min-width: 901px)").matches;
+matchMedia("(min-width: 901px)").addEventListener?.("change", (e) => {
+  if (e.matches) for (const [id, c] of Object.entries(covers)) setWallCover(id, c.img);
+});
 function setWallCover(id, src) {
+  if (!wallShown()) return;
   for (const t of document.querySelectorAll(`.wall-tile[data-id="${id}"]:not(.has-img)`)) {
     const img = new Image();
     img.alt = "";
@@ -1157,16 +1191,18 @@ if (window.Covers) {
     if (card && !card.classList.contains("has-img")) {
       const img = new Image();
       img.alt = "Pochette";
+      img.loading = "lazy"; // hors écran : téléchargée seulement à l'approche
+      img.decoding = "async";
       img.onload = () => card.classList.add("has-img");
+      card.prepend(img); // dans la page avant la source, pour que le chargement différé s'applique
       img.src = data.img;
-      card.prepend(img);
     }
     if ($("#modal").open && visible[current]?.id === id && !queue) { // pas pendant l'écoute à la suite
       renderModal();
       if (linkTrack) focusTrack(linkTrack, { scroll: false }); // la tracklist vient d'être redessinée
     }
     clearTimeout(window.__tblTimer);
-    window.__tblTimer = setTimeout(() => (renderStatsTable(), renderTrackHits()), 300);
+    window.__tblTimer = setTimeout(() => { if (statsDone) renderStatsTable(); renderTrackHits(); }, 300);
     document.dispatchEvent(new CustomEvent("cover-loaded", { detail: id }));
   });
 }

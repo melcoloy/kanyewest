@@ -131,7 +131,7 @@
             .map((s) => {
               const a = albums.find((x) => x.id === s.albumId);
               return `<li data-album="${a.id}" data-titre="${escapeHtml(s.orig)}" tabindex="0">
-                <span class="bt-rcov sm" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img src="${covers[a.id].img}" alt="">` : ""}</span>
+                <span class="bt-rcov sm" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img loading="lazy" decoding="async" src="${covers[a.id].img}" alt="">` : ""}</span>
                 <span class="bt-rmain"><b>${escapeHtml(s.titre)}</b><span class="muted">${escapeHtml(a.titre)} · ${a.date.slice(0, 4)}</span></span>
                 ${s.streams ? `<span class="gv-sst">${fmtS(s.streams)}</span>` : ""}
               </li>`;
@@ -232,5 +232,6 @@
       requestAnimationFrame(() => focusTrack(titre));
     } else openAlbum(id);
   }
-  render();
+  // Préparé à la première ouverture de l'onglet (démarrage plus rapide)
+  window.onTabOpen("invites", render);
 })();
