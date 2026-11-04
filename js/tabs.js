@@ -99,6 +99,7 @@
   window.currentView = view;
 
   const [initial, sub] = fromHash();
-  show(names.includes(initial) ? initial : "disco", sub);
+  // Adresse qui n'est pas un onglet (#album/…, ancre…) : Discographie, sans sous-vue
+  show(names.includes(initial) ? initial : "disco", names.includes(initial) ? sub : "");
   if (ALIAS[location.hash.slice(1)]) history.replaceState(null, "", "#" + view());
 })();

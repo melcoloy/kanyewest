@@ -85,6 +85,66 @@ function renderStats() {
     .join("");
 }
 
+// ---------- Ce jour-là : anniversaires de sortie ----------
+// Aujourd'hui → « il y a N ans jour pour jour » ; 1 à 3 jours après → « fêtait » ; sinon le prochain.
+// Pour tester une autre date : index.html?jour=2026-11-22
+const ANNIV_PAST_DAYS = 3;
+function todayKey() {
+  const q = new URLSearchParams(location.search).get("jour");
+  if (/^\d{4}-\d{2}-\d{2}$/.test(q || "")) return q;
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+const dayNum = (iso) => Math.round(Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) / 864e5);
+
+function anniversaries(today = todayKey()) {
+  const y = +today.slice(0, 4);
+  return albums
+    .map((a) => {
+      // Anniversaire de cette année, ou de l'an prochain s'il est passé depuis plus de 3 jours
+      let ay = y;
+      let days = dayNum(`${ay}${a.date.slice(4)}`) - dayNum(today);
+      if (days < -ANNIV_PAST_DAYS) days = dayNum(`${++ay}${a.date.slice(4)}`) - dayNum(today);
+      return { a, days, age: ay - +a.date.slice(0, 4) };
+    })
+    .filter((x) => x.age > 0)
+    .sort((x, y) => x.days - y.days);
+}
+
+function renderAnniv() {
+  const box = $("#anniv");
+  if (!box) return;
+  const list = anniversaries();
+  // Priorité : aujourd'hui, puis les jours qui viennent de passer, puis le prochain
+  const pick = list.filter((x) => x.days === 0).length ? list.filter((x) => x.days === 0)
+    : list.filter((x) => x.days < 0).length ? [list.filter((x) => x.days < 0).at(-1)]
+    : [list.find((x) => x.days > 0)];
+  if (!pick[0]) return (box.innerHTML = "");
+  const ans = (n) => `${n} an${n > 1 ? "s" : ""}`;
+  const jours = (n) => `${n} jour${n > 1 ? "s" : ""}`;
+  box.innerHTML = pick
+    .map(({ a, days, age }) => {
+      const t = `<i>${escapeHtml(a.titre)}</i>`;
+      const kicker = days === 0 ? "Ce jour-là" : days < 0 ? "Cette semaine" : "Prochain anniversaire";
+      const text =
+        days === 0 ? `Il y a ${ans(age)} jour pour jour sortait ${t}.`
+        : days < 0 ? `${days === -1 ? "Hier" : `Il y a ${jours(-days)}`}, ${t} fêtait ses ${ans(age)}.`
+        : `${days === 1 ? "Demain" : `Dans ${jours(days)}`}, ${t} fêtera ses ${ans(age)}.`;
+      const round = age % 5 === 0;
+      return `
+    <button class="anniv${days === 0 ? " today" : ""}${round ? " round" : ""}" data-id="${a.id}">
+      <span class="hit-cov" style="background:${gradient(a.palette)}">${covers[a.id] ? `<img src="${covers[a.id].img}" alt="">` : initials(a.titre)}</span>
+      <span class="anniv-main">
+        <span class="anniv-kicker">${days === 0 || round ? "🎂 " : ""}${kicker}</span>
+        <span class="anniv-text">${text}</span>
+        <span class="anniv-date">Sorti le ${fmtDate(a.date)}</span>
+      </span>
+      <span class="anniv-go" aria-hidden="true">→</span>
+    </button>`;
+    })
+    .join("");
+}
+
 // ---------- Frise chronologique ----------
 function renderTimeline() {
   const start = new Date(albums[0].date).getTime();
@@ -214,14 +274,16 @@ function renderTrackHits() {
   more.textContent = hitsExpanded ? "Réduire la liste" : `Voir les ${hits.length - HITS_SHOWN} autres morceaux`;
 }
 
-// Met en évidence un morceau dans la tracklist de la fiche ouverte
-function focusTrack(titre) {
-  const li = [...document.querySelectorAll("#tracklist-wrap .tracklist li")].find(
-    (l) => l.querySelector(".tr-title")?.firstChild?.textContent.trim() === titre
-  );
-  if (!li) return;
+// Met en évidence un morceau dans la tracklist de la fiche ouverte (et l'ajoute au lien de la fiche)
+const rowTitle = (li) => li.querySelector(".tr-title")?.firstChild?.textContent.trim();
+function focusTrack(titre, { scroll = true } = {}) {
+  const lis = [...document.querySelectorAll("#tracklist-wrap .tracklist li")];
+  lis.forEach((l) => l.classList.remove("hit-row"));
+  const li = lis.find((l) => rowTitle(l) === titre);
+  if (!li) return setAlbumHash();
   li.classList.add("hit-row");
-  li.scrollIntoView({ block: "center", behavior: "smooth" });
+  if (scroll) li.scrollIntoView({ block: "center", behavior: "smooth" });
+  setAlbumHash(titre);
 }
 
 const filtersActive = () => state.query || state.year || state.album || state.type !== "all";
@@ -549,6 +611,62 @@ function openAlbum(id) {
   current = list.findIndex((a) => a.id === id);
   renderModal();
   if (!$("#modal").open) $("#modal").showModal();
+  setAlbumHash();
+}
+
+// ---------- Liens directs : #album/<id> ou #album/<id>/<titre du morceau> ----------
+// L'adresse suit la fiche ouverte (remplacée, pas ajoutée à l'historique) : on peut la copier à tout moment.
+const albumLink = (id, titre) => `#album/${id}${titre ? "/" + encodeURIComponent(titre) : ""}`;
+let linkTrack = ""; // morceau sélectionné dans le lien
+
+function setAlbumHash(titre = "") {
+  linkTrack = titre;
+  syncShareBtn();
+  const h = albumLink(visible[current].id, titre);
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+
+// Adresse de l'onglet en cours, sans fiche
+const tabUrl = () => {
+  const v = window.currentView?.() || "disco";
+  return v === "disco" ? location.pathname + location.search : "#" + v;
+};
+
+function openFromHash() {
+  const m = location.hash.match(/^#album\/([^/]+)(?:\/(.+))?$/);
+  if (!m) return false;
+  const id = decodeURIComponent(m[1]);
+  const titre = m[2] ? decodeURIComponent(m[2]) : "";
+  if (!albums.some((a) => a.id === id)) return false;
+  if (titre) editionChoice[id] = editionOf(id, titre);
+  openAlbum(id);
+  if (titre) requestAnimationFrame(() => focusTrack(titre));
+  return true;
+}
+
+function syncShareBtn() {
+  const b = $("#share-btn");
+  if (b && !b.dataset.flash) b.textContent = linkTrack ? "🔗 Partager ce morceau" : "🔗 Partager l'album";
+}
+
+async function shareLink() {
+  const b = $("#share-btn");
+  const a = visible[current];
+  const url = location.href;
+  const title = `${linkTrack ? linkTrack + " · " : ""}${a.titre} · Kanye West`;
+  // Sur téléphone : la feuille de partage du système ; ailleurs : copie dans le presse-papiers
+  if (navigator.share && matchMedia("(pointer: coarse)").matches) {
+    try { await navigator.share({ title, url }); } catch {}
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    b.dataset.flash = "1";
+    b.textContent = "✓ Lien copié";
+    setTimeout(() => { delete b.dataset.flash; syncShareBtn(); }, 1800);
+  } catch {
+    prompt("Copie ce lien :", url);
+  }
 }
 
 function renderModal() {
@@ -568,6 +686,7 @@ function renderModal() {
       <div>
         <h2>${escapeHtml(a.titre)}</h2>
         <p>${a.avec ? "Kanye West & " + escapeHtml(a.avec) : "Kanye West"} · ère « ${escapeHtml(a.ere)} »</p>
+        <button class="share-btn" id="share-btn" type="button">🔗 Partager l'album</button>
       </div>
     </div>
     <div class="modal-content">
@@ -590,6 +709,7 @@ function renderModal() {
   $("#prev").disabled = current === 0;
   $("#next").disabled = current === visible.length - 1;
   $("#modal").scrollTop = 0;
+  syncShareBtn();
 }
 
 // Liens d'écoute : lien direct si fourni dans `liens` (ou trouvé par l'API pour Apple), sinon une recherche
@@ -633,10 +753,26 @@ function renderTracklist(a) {
   const st = t.map((x) => trackStreams(a.id, x.titre));
   const maxSt = Math.max(0, ...st.filter(Boolean));
   const hasSt = maxSt > 0;
+  // Streams gagnés depuis le relevé précédent (data/track-streams-prev.js)
+  const gain = t.map((x, i) => {
+    const before = TS_PREV[a.id]?.[x.titre];
+    return st[i] && before && st[i] > before ? st[i] - before : 0;
+  });
+  const maxGain = Math.max(0, ...gain);
+  const prevDate = window.TRACK_STREAMS_PREV_DATE;
 
   return `<div id="tracklist-wrap">
     <h3>Tracklist <span class="h3-meta">${t.length} titres${total}${nbFeats ? ` · ${nbFeats} invités` : ""}${a.id === "donda-2" ? "" : " · clique sur un numéro pour écouter un extrait"}</span></h3>
     ${picker}
+    ${
+      a.id === "donda-2"
+        ? ""
+        : `<div class="queue-bar">
+        <button class="queue-btn" id="queue-btn" type="button">▶ Écouter les extraits à la suite</button>
+        <button class="queue-next" id="queue-next" type="button" hidden>Suivant ⏭</button>
+        <span class="queue-pos" id="queue-pos" aria-live="polite"></span>
+      </div>`
+    }
     <ol class="tracklist">
       ${t
         .map(
@@ -662,7 +798,11 @@ function renderTracklist(a) {
           }${
             hasSt && st[i]
               ? `<span class="tr-streams"><span class="tr-strack"><span class="tr-sbar" style="width:${(st[i] / maxSt) * 100}%"></span></span>${fmtStreams(st[i])}${
+                  gain[i] ? ` <span class="tr-gain" title="Streams gagnés depuis le ${fmtShort(prevDate)}">+${fmtDelta(gain[i])}</span>` : ""
+                }${
                   st[i] === maxSt ? ' <span class="tag top">le plus écouté</span>' : ""
+                }${
+                  gain[i] && gain[i] === maxGain && t.filter((_, k) => gain[k]).length > 1 ? ' <span class="tag hot">plus forte hausse</span>' : ""
                 }</span>`
               : ""
           }</span>
@@ -671,9 +811,51 @@ function renderTracklist(a) {
         )
         .join("")}
     </ol>
-    ${hasSt ? `<p class="tr-note">Streams Spotify${ed ? " de l'édition standard" : ""} au ${fmtDate((window.STATS?.spotify?.date) || "2026-10-24")} (kworb.net).</p>` : ""}
+    ${hasSt ? `<p class="tr-note">Streams Spotify${ed ? " de l'édition standard" : ""} au ${fmtDate((window.STATS?.spotify?.date) || "2026-10-24")} (kworb.net)${
+      maxGain ? ` ; en vert, les streams gagnés depuis le relevé du ${fmtDate(prevDate)}` : ""
+    }.</p>` : ""}
     ${note ? `<p class="tr-note">ⓘ ${escapeHtml(note)}</p>` : ""}
   </div>`;
+}
+
+// ---------- Écoute de l'album à la suite (extraits de 30 s) ----------
+let queue = null; // { i: index du morceau, token } ; token : ignore les rappels d'un extrait déjà remplacé
+const queueButtons = () => [...document.querySelectorAll("#tracklist-wrap .tr-play")];
+
+function playQueueAt(i) {
+  const btns = queueButtons();
+  while (i < btns.length && btns[i].disabled) i++; // extrait déjà connu comme introuvable
+  if (!queue || i >= btns.length) {
+    queue = null;
+    return syncQueue();
+  }
+  const token = ++queue.token;
+  queue.i = i;
+  const b = btns[i];
+  const a = visible[current];
+  syncQueue();
+  b.closest("li").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  MiniPlayer.toggle(b, () => Previews.ye({ titre: b.dataset.titre, albumId: a.id }), {
+    onEnd: (reason) => {
+      if (!queue || queue.token !== token) return;
+      if (reason === "stopped") {
+        queue = null;
+        return syncQueue();
+      }
+      playQueueAt(i + 1); // fini ou introuvable : morceau suivant
+    },
+  });
+}
+
+function syncQueue() {
+  const btn = $("#queue-btn");
+  if (!btn) return;
+  const n = queueButtons().length;
+  btn.textContent = queue ? "■ Arrêter l'écoute" : "▶ Écouter les extraits à la suite";
+  btn.classList.toggle("on", !!queue);
+  $("#queue-next").hidden = !queue || queue.i >= n - 1;
+  $("#queue-pos").textContent = queue ? `Extrait ${queue.i + 1} / ${n}` : "";
+  document.querySelectorAll("#tracklist-wrap .tracklist li").forEach((li, k) => li.classList.toggle("playing", !!queue && k === queue.i));
 }
 
 function step(delta) {
@@ -681,6 +863,7 @@ function step(delta) {
   if (n < 0 || n >= visible.length) return;
   current = n;
   renderModal();
+  setAlbumHash();
 }
 
 // ---------- Événements ----------
@@ -788,7 +971,7 @@ function bindEvents() {
       statsState.key = k;
       return renderStatsTable();
     }
-    const el = e.target.closest(".card, .tl-dot, .fw-row, #stats-table tr[data-id], #singles li[data-id], #sp-songs li[data-id]");
+    const el = e.target.closest(".card, .tl-dot, .fw-row, .anniv, #stats-table tr[data-id], #singles li[data-id], #sp-songs li[data-id]");
     if (el) openAlbum(el.dataset.id);
   });
 
@@ -806,6 +989,25 @@ function bindEvents() {
     window.MiniPlayer?.stop();
     window.setPageTitle?.();
     renderGrid();
+    linkTrack = "";
+    if (location.hash.startsWith("#album/")) history.replaceState(null, "", tabUrl());
+  });
+
+  // Retour / Suivant du navigateur : ouvre ou ferme la fiche selon l'adresse
+  window.addEventListener("popstate", () => {
+    if (location.hash.startsWith("#album/")) openFromHash();
+    else if ($("#modal").open) $("#modal").close();
+  });
+
+  // Partager, et clic sur un titre de la tracklist = le sélectionner dans le lien
+  $("#modal").addEventListener("click", (e) => {
+    if (e.target.closest("#share-btn")) return shareLink();
+    const li = e.target.closest("#tracklist-wrap .tracklist li");
+    if (!li || e.target.closest("button, a")) return;
+    if (li.classList.contains("hit-row")) {
+      li.classList.remove("hit-row");
+      setAlbumHash();
+    } else focusTrack(rowTitle(li), { scroll: false });
   });
 
   // Choix de l'édition (standard / deluxe) : on ne redessine que la tracklist
@@ -816,6 +1018,7 @@ function bindEvents() {
     editionChoice[a.id] = b.dataset.edition;
     MiniPlayer.stop();
     $("#tracklist-wrap").outerHTML = renderTracklist(a);
+    if (linkTrack) focusTrack(linkTrack, { scroll: false }); // le garde s'il existe dans cette édition
   });
 
   // ▶ sur un numéro de la tracklist : extrait iTunes (js/player.js + js/previews.js)
@@ -823,7 +1026,21 @@ function bindEvents() {
     const b = e.target.closest(".tr-play");
     if (!b) return;
     const a = visible[current];
+    // Pendant l'écoute à la suite, un autre numéro = on continue à partir de ce morceau
+    const k = queueButtons().indexOf(b);
+    if (queue && k !== queue.i) return playQueueAt(k);
     MiniPlayer.toggle(b, () => Previews.ye({ titre: b.dataset.titre, albumId: a.id }));
+  });
+
+  // Écouter à la suite : depuis le morceau sélectionné s'il y en a un, sinon depuis le début
+  $("#modal").addEventListener("click", (e) => {
+    if (e.target.closest("#queue-btn")) {
+      if (queue) return MiniPlayer.stop(); // le rappel « stopped » remet le bouton à zéro
+      const sel = [...document.querySelectorAll("#tracklist-wrap .tracklist li")].findIndex((li) => li.classList.contains("hit-row"));
+      queue = { i: 0, token: 0 };
+      return playQueueAt(Math.max(0, sel));
+    }
+    if (e.target.closest("#queue-next") && queue) playQueueAt(queue.i + 1);
   });
 
   document.addEventListener("keydown", (e) => {
@@ -836,6 +1053,8 @@ function bindEvents() {
 }
 
 // ---------- Init ----------
+window.addEventListener("DOMContentLoaded", openFromHash);
+renderAnniv();
 renderStats();
 renderTimeline();
 renderFilterOptions();
@@ -868,6 +1087,7 @@ if (window.Covers) {
   Covers.loadAll(albums, (id, data) => {
     covers[id] = data;
     setWallCover(id, data.img);
+    if (document.querySelector(`.anniv[data-id="${id}"]`)) renderAnniv();
     const card = document.querySelector(`.card[data-id="${id}"] .cover`);
     if (card && !card.classList.contains("has-img")) {
       const img = new Image();
@@ -876,7 +1096,10 @@ if (window.Covers) {
       img.src = data.img;
       card.prepend(img);
     }
-    if ($("#modal").open && visible[current]?.id === id) renderModal();
+    if ($("#modal").open && visible[current]?.id === id && !queue) { // pas pendant l'écoute à la suite
+      renderModal();
+      if (linkTrack) focusTrack(linkTrack, { scroll: false }); // la tracklist vient d'être redessinée
+    }
     clearTimeout(window.__tblTimer);
     window.__tblTimer = setTimeout(() => (renderStatsTable(), renderTrackHits()), 300);
     document.dispatchEvent(new CustomEvent("cover-loaded", { detail: id }));

@@ -178,7 +178,7 @@ window.ALBUMS = [
     ere: "Wyoming Sessions",
     resume:
       "Duo avec Kid Cudi, sorti une semaine après « ye ». Psychédélique, cathartique, souvent considéré comme le meilleur projet de la série.",
-    titresCles: ["Reborn", "Freeee (Ghost Town Pt. 2)", "4th Dimension"],
+    titresCles: ["Reborn", "Freeee (Ghost Town, Pt. 2)", "4th Dimension"],
     distinctions: [],
   },
   {

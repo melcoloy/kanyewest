@@ -24,6 +24,10 @@ jobs:
       - name: Récupérer les chiffres sur kworb.net
         run: python scripts/update_streams.py
 
+      # Si les nouveaux chiffres cassent les données, on s'arrête ici : rien n'est commité
+      - name: Vérifier les données
+        run: node scripts/check_data.js
+
       - name: Commiter s'il y a du nouveau
         run: |
           if git diff --quiet; then

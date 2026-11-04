@@ -2,8 +2,10 @@
 // Ye au centre, chaque invité crédité (data/tracklists.js) autour. Plus un artiste apparaît
 // souvent, plus il est près du centre et gros ; sur chaque cercle, l'ordre suit la chronologie
 // (première collaboration). Un trait relie deux invités crédités sur le même morceau.
-// Clic sur un artiste (ou dans la liste) : ses morceaux avec Ye.
-// S'appuie sur app.js (albums, tracks, covers, gradient, escapeHtml, openAlbum).
+// Clic sur un artiste (ou dans la liste) : ses morceaux avec Ye, ses chiffres (albums, période,
+// streams Spotify cumulés des morceaux en commun, morceau le plus écouté).
+// La liste se classe par nombre de morceaux ou par streams cumulés.
+// S'appuie sur app.js (albums, tracks, editions, TS, covers, gradient, escapeHtml, openAlbum).
 
 (() => {
   const root = document.getElementById("invites");
@@ -15,12 +17,13 @@
   for (const a of albums) {
     // Édition standard + titres nouveaux ou modifiés des éditions deluxe (ex. Lauryn Hill sur Bully deluxe)
     const extra = (editions[a.id] || []).flatMap((e) =>
-      e.tracks.filter((t) => e.nouveaux.includes(t.titre) || e.modifies[t.titre]).map((t) => ({ ...t, titre: e.modifies[t.titre] ? `${t.titre} (${e.nom.toLowerCase()})` : t.titre }))
+      e.tracks.filter((t) => e.nouveaux.includes(t.titre) || e.modifies[t.titre]).map((t) => ({ ...t, orig: t.titre, titre: e.modifies[t.titre] ? `${t.titre} (${e.nom.toLowerCase()})` : t.titre }))
     );
     for (const t of [...(tracks[a.id] || []), ...extra]) {
       for (const f of t.feats) {
         if (!guests.has(f)) guests.set(f, { name: f, songs: [], first: a.date });
-        guests.get(f).songs.push({ titre: t.titre, albumId: a.id });
+        // Streams Spotify du morceau (une version modifiée en deluxe garde le chiffre du titre d'origine)
+        guests.get(f).songs.push({ titre: t.titre, orig: t.orig || t.titre, albumId: a.id, date: a.date, streams: TS[a.id]?.[t.orig || t.titre] || 0 });
       }
       for (let i = 0; i < t.feats.length; i++)
         for (let j = i + 1; j < t.feats.length; j++) {
@@ -30,10 +33,20 @@
     }
   }
   if (!guests.size) return;
-  const all = [...guests.values()].map((g) => ({ ...g, n: g.songs.length }));
+  const all = [...guests.values()].map((g) => ({
+    ...g,
+    n: g.songs.length,
+    streams: g.songs.reduce((s, x) => s + x.streams, 0),
+    nAlbums: new Set(g.songs.map((x) => x.albumId)).size,
+    last: g.songs.reduce((d, x) => (x.date > d ? x.date : d), g.first),
+    top: g.songs.reduce((best, x) => (x.streams > (best?.streams || 0) ? x : best), null),
+  }));
+  // 1,23 Md · 456 M · 789 k
+  const fmtS = (n) => (n >= 1e9 ? `${(n / 1e9).toFixed(2).replace(".", ",")} Md` : n >= 1e6 ? `${Math.round(n / 1e6)} M` : n >= 1e3 ? `${Math.round(n / 1e3)} k` : String(n));
+  const morceaux = (n) => `${n} morceau${n > 1 ? "x" : ""}`;
   const byName = Object.fromEntries(all.map((g) => [g.name, g]));
 
-  const state = { min: 2, selected: null, query: "" };
+  const state = { min: 2, selected: null, query: "", sort: "n" };
   const W = 1000, C = W / 2;
   // Cercles : plus de collaborations = plus près du centre
   const ringOf = (n) => (n >= 4 ? 0 : n === 3 ? 1 : n === 2 ? 2 : 3);
@@ -99,24 +112,41 @@
           .join("")}
       </svg>`;
 
-    const top = [...nodes].sort((x, y) => y.n - x.n || x.first.localeCompare(y.first));
+    const byStreams = state.sort === "streams";
+    const top = [...nodes].sort((x, y) => (byStreams ? y.streams - x.streams : y.n - x.n || y.streams - x.streams) || x.first.localeCompare(y.first));
+    const periode = (g) => (g.first.slice(0, 4) === g.last.slice(0, 4) ? g.first.slice(0, 4) : `${g.first.slice(0, 4)} → ${g.last.slice(0, 4)}`);
     const side = sel
       ? `<div class="gv-detail">
           <button class="bt-link" data-act="back">← Tous les invités</button>
           <h3>${escapeHtml(sel.name)}</h3>
-          <p class="muted">${sel.n} morceau${sel.n > 1 ? "x" : ""} avec Ye · première fois en ${sel.first.slice(0, 4)}${linked.size ? ` · aux côtés de ${[...linked].map(escapeHtml).join(", ")}` : ""}</p>
+          <div class="gv-facts">
+            <div><b>${sel.n}</b><span>${sel.n > 1 ? "morceaux" : "morceau"}</span></div>
+            <div><b>${sel.nAlbums}</b><span>album${sel.nAlbums > 1 ? "s" : ""}</span></div>
+            <div><b>${sel.streams ? fmtS(sel.streams) : "—"}</b><span>streams cumulés</span></div>
+            <div><b>${periode(sel)}</b><span>période</span></div>
+          </div>
+          ${sel.top && sel.n > 1 ? `<p class="muted">Le plus écouté : <b class="gv-top">${escapeHtml(sel.top.titre)}</b> (${fmtS(sel.top.streams)})</p>` : ""}
+          ${linked.size ? `<p class="muted">Aux côtés de ${[...linked].map(escapeHtml).join(", ")}</p>` : ""}
           <ol class="bt-recap">${sel.songs
             .map((s) => {
               const a = albums.find((x) => x.id === s.albumId);
-              return `<li data-album="${a.id}" tabindex="0">
+              return `<li data-album="${a.id}" data-titre="${escapeHtml(s.orig)}" tabindex="0">
                 <span class="bt-rcov sm" style="background:${gradient(a.palette)}">${covers[a.id]?.img ? `<img src="${covers[a.id].img}" alt="">` : ""}</span>
                 <span class="bt-rmain"><b>${escapeHtml(s.titre)}</b><span class="muted">${escapeHtml(a.titre)} · ${a.date.slice(0, 4)}</span></span>
+                ${s.streams ? `<span class="gv-sst">${fmtS(s.streams)}</span>` : ""}
               </li>`;
             })
             .join("")}</ol>
+          <p class="muted gv-note">Streams Spotify des morceaux en commun (un morceau à plusieurs invités compte pour chacun).</p>
         </div>`
       : `<ol class="gv-list">${top
-          .map((g, i) => `<li data-guest="${escapeHtml(g.name)}" tabindex="0"${match(g) ? ' class="match"' : ""}><span class="gv-rank">${i + 1}</span><span>${escapeHtml(g.name)}</span><b>${g.n}</b></li>`)
+          .map(
+            (g, i) => `<li data-guest="${escapeHtml(g.name)}" tabindex="0"${match(g) ? ' class="match"' : ""}>
+              <span class="gv-rank">${i + 1}</span>
+              <span class="gv-name">${escapeHtml(g.name)}<small>${byStreams ? morceaux(g.n) : g.streams ? fmtS(g.streams) + " de streams" : ""}</small></span>
+              <b>${byStreams ? (g.streams ? fmtS(g.streams) : "—") : g.n}</b>
+            </li>`
+          )
           .join("")}</ol>`;
 
     root.innerHTML = `
@@ -125,6 +155,10 @@
         <select id="gv-min" aria-label="Filtrer">
           <option value="2"${state.min === 2 ? " selected" : ""}>Invités sur au moins 2 morceaux</option>
           <option value="1"${state.min === 1 ? " selected" : ""}>Tous les invités (${all.length})</option>
+        </select>
+        <select id="gv-sort" aria-label="Classer la liste">
+          <option value="n"${state.sort === "n" ? " selected" : ""}>Classés par nombre de morceaux</option>
+          <option value="streams"${state.sort === "streams" ? " selected" : ""}>Classés par streams cumulés</option>
         </select>
         <span class="muted gv-count">${nodes.length} artistes · ${pairEdges.length} duos sur un même morceau</span>
       </div>
@@ -151,6 +185,10 @@
       state.min = +e.target.value;
       render();
     });
+    root.querySelector("#gv-sort").addEventListener("change", (e) => {
+      state.sort = e.target.value;
+      render();
+    });
   }
 
   function select(name) {
@@ -163,7 +201,7 @@
     const g = e.target.closest("[data-guest]");
     if (g) return select(g.dataset.guest);
     const alb = e.target.closest("[data-album]");
-    if (alb) return openAlbum(alb.dataset.album);
+    if (alb) return openSong(alb);
     if (e.target.closest('[data-act="back"]')) {
       state.selected = null;
       render();
@@ -174,7 +212,18 @@
     const g = e.target.closest("[data-guest]");
     if (g) select(g.dataset.guest);
     const alb = e.target.closest("[data-album]");
-    if (alb) openAlbum(alb.dataset.album);
+    if (alb) openSong(alb);
   });
+
+  // Ouvre la fiche de l'album, sur le bon titre (et la bonne édition) quand on le connaît
+  function openSong(el) {
+    const id = el.dataset.album;
+    const titre = el.dataset.titre;
+    if (titre && allTracks(id).some((t) => t.titre === titre)) {
+      editionChoice[id] = editionOf(id, titre);
+      openAlbum(id);
+      requestAnimationFrame(() => focusTrack(titre));
+    } else openAlbum(id);
+  }
   render();
 })();
