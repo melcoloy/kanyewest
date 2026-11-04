@@ -81,6 +81,7 @@
     const CHRONO = 60; // secondes
     let settings = { mode: "titre", sel: "classiques", format: "solo" };
     let game = null; // { list, i, score, history, round, next, scores (duel), deadline (chrono) }
+    let endShare = ""; // texte à partager de la dernière partie terminée
     const best = daily ? {} : store.get(BEST_KEY, {});
     const bestKey = () => `${settings.mode}-${settings.sel}${settings.format === "chrono" ? "-chrono" : ""}`;
     const fmt = () => (daily ? "solo" : settings.format);
@@ -576,8 +577,12 @@
         game = null;
         return renderDailyIntro();
       }
+      const MODES = { titre: "Trouve le morceau", album: "Trouve l'album" };
+      const SELS = { classiques: "Les classiques", tout: "Toute la discographie" };
+      const jeu = `Blind test (${MODES[settings.mode]} · ${SELS[settings.sel]}${chrono() ? " · contre la montre" : duel() ? " · duel" : ""})`;
       if (duel()) {
         const [a, b] = game.scores;
+        endShare = ShareResult.text({ jeu, score: `${PLAYERS[0]} ${a} – ${b} ${PLAYERS[1]}`, grille: grid({ manches }), vue: "jeux/blind-test" });
         root.innerHTML = `
           <div class="bt-end">
             <p class="g-over-title">${a === b ? "Égalité !" : `${PLAYERS[a > b ? 0 : 1]} gagne !`}</p>
@@ -586,6 +591,7 @@
             ${recapHtml(manches)}
             <div class="bt-actions">
               <button class="g-btn" data-act="start">Revanche</button>
+              ${ShareResult.button()}
               <button class="bt-link" data-act="setup">Changer de mode</button>
             </div>
           </div>`;
@@ -597,6 +603,12 @@
         best[key] = game.score;
         store.set(BEST_KEY, best);
       }
+      endShare = ShareResult.text({
+        jeu,
+        score: chrono() ? `${game.score} pts en ${CHRONO} s` : `${game.score}/${manches.length * 4} pts`,
+        grille: grid({ manches }),
+        vue: "jeux/blind-test",
+      });
       root.innerHTML = `
         <div class="bt-end">
           <p class="g-over-title">${record && game.score > 0 ? "Nouveau record !" : "Partie terminée"}</p>
@@ -605,6 +617,7 @@
           ${recapHtml(manches)}
           <div class="bt-actions">
             <button class="g-btn" data-act="start">Rejouer</button>
+            ${ShareResult.button()}
             <button class="bt-link" data-act="setup">Changer de mode</button>
           </div>
         </div>`;
@@ -632,6 +645,7 @@
         return start();
       }
       if (act === "share") return share(shareText(dateKey(), defi().jours[dateKey()]), btn);
+      if (act === "share-result") return ShareResult.share(endShare, btn);
       if (act === "setup") return renderSetup();
       if (act === "quit") {
         clearInterval(clock);

@@ -157,8 +157,14 @@
               <span class="bt-pts ${h.gained ? "ok" : "ko"}">${h.gained ? `+${h.gained} · ${LEVELS[h.level]} × ${LEVELS[h.level]}` : "✗"}</span></li>`
             )
             .join("")}</ol>
-          <div class="bt-actions"><button class="g-btn" data-act="start">Rejouer</button></div>
+          <div class="bt-actions"><button class="g-btn" data-act="start">Rejouer</button>${ShareResult.button()}</div>
         </div>`;
+      game.shareText = ShareResult.text({
+        jeu: "Pochette floue",
+        score: `${game.score}/${game.list.length * 4} pts`,
+        grille: ShareResult.grid(game.history.map((h) => [h.gained, 4])),
+        vue: "jeux/pochette",
+      });
     }
 
     root.addEventListener("click", (e) => {
@@ -170,11 +176,12 @@
       if (act === "start") return start();
       if (act === "quit") return intro();
       if (act === "skip") return answer(null);
+      if (act === "share-result") return ShareResult.share(game?.shareText || "", e.target.closest("[data-act]"));
       if (act === "more") { game.round.level++; return render(); }
       if (act === "next") { game.i++; return game.i >= game.list.length ? end() : next(); }
     });
     document.addEventListener("keydown", (e) => {
-      if (window.currentView?.() !== "jeux/pochette" || document.getElementById("modal").open) return;
+      if (window.currentView?.() !== "jeux/pochette" || document.getElementById("modal").open || e.target.closest?.("input, select, textarea")) return;
       const r = game?.round;
       if (r && !r.answered && /^[1-4]$/.test(e.key)) answer(r.choices[+e.key - 1].id);
     });
@@ -299,8 +306,14 @@
                 <span class="bt-pts ${h.gained ? "ok" : "ko"}">${h.gained ? `+${h.gained}` : "✗"} · ${h.guess}</span></li>`;
             })
             .join("")}</ol>
-          <div class="bt-actions"><button class="g-btn" data-act="start">Rejouer</button></div>
+          <div class="bt-actions"><button class="g-btn" data-act="start">Rejouer</button>${ShareResult.button()}</div>
         </div>`;
+      game.shareText = ShareResult.text({
+        jeu: "Devine l'année",
+        score: `${game.score}/${game.list.length * 5} pts`,
+        grille: ShareResult.grid(game.history.map((h) => [h.gained, 5])),
+        vue: "jeux/annee",
+      });
     }
 
     root.addEventListener("click", (e) => {
@@ -311,6 +324,7 @@
       if (act === "start") return start();
       if (act === "quit") return MiniPlayer.stop(), intro();
       if (act === "validate") return validate();
+      if (act === "share-result") return ShareResult.share(game?.shareText || "", btn);
       if (act === "play") return MiniPlayer.toggle(btn, () => Previews.ye(game.round.t));
       if (act === "next") { game.i++; return game.i >= game.list.length ? end() : next(); }
     });

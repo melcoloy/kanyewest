@@ -1,7 +1,12 @@
-# Vérifie la cohérence des données (albums, tracklists, streams, samples, fichiers hors ligne)
-# à chaque push et à chaque pull request. En cas d'erreur, le détail est dans le journal
-# de l'étape « Vérifier les données ». En local : node scripts/check_data.js
-name: Vérification des données
+# Deux vérifications à chaque push et à chaque pull request :
+#   - Données : cohérence des albums, tracklists, streams, samples, fichiers hors ligne
+#     (en local : node scripts/check_data.js)
+#   - Site : ouvre le site dans Chromium, passe sur tous les onglets, jeux, fiches, liens directs
+#     et la recherche rapide, sur ordinateur et sur mobile ; échoue à la moindre erreur JavaScript
+#     (en local : npm install --no-save playwright && npx playwright install chromium,
+#      puis node scripts/smoke_test.js)
+# En cas de croix rouge, le détail est dans le journal de l'étape qui a échoué.
+name: Vérifications
 
 on:
   push:
@@ -13,13 +18,32 @@ permissions:
 
 jobs:
   check:
+    name: Données
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Vérifier les données
         run: node scripts/check_data.js
+
+  site:
+    name: Site dans un navigateur
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Installer Playwright et Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.63.0
+          npx playwright install --with-deps chromium
+
+      - name: Tester le site
+        run: node scripts/smoke_test.js

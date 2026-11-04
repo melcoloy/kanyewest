@@ -8,6 +8,8 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
 - **Pochettes** chargées automatiquement (API iTunes Search), ou tes propres images
 - **Liens d'écoute** : Spotify, Apple Music, Deezer, YouTube Music
 - **Tracklist complète** dans chaque fiche, avec durées et **invités crédités** — clic sur un invité = tous ses albums avec Ye
+- **Recherche rapide** partout (touche `/`, `Ctrl + K` ou la loupe de la barre d'onglets) : sections, jeux, albums,
+  morceaux, invités, samples — ↑ ↓ et Entrée pour ouvrir
 - **Recherche** (album, morceau, invité, label, année), sans tenir compte des accents ni des majuscules : les morceaux trouvés (éditions deluxe comprises) s'affichent dans une liste, un clic ouvre la fiche sur le bon titre
 - **Filtres** par année, par album, solo / collaborations, et **tri** (date, classement, longueur)
 - **Fiche détaillée** par album : date, label, place au Billboard 200, titres clés, distinctions, lien Apple Music — navigation avec ← →
@@ -18,7 +20,8 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
 - **Volume des extraits** : bouton 🔊 dans la barre d'onglets (curseur + couper le son), réglage gardé d'une visite à l'autre
 - **Mode clair / sombre** : suit le réglage du système, bouton ☀ / ☾ pour forcer l'un ou l'autre
 - **Fiches album** : ▶ sur chaque numéro de la tracklist pour écouter un extrait, et courbe des streams Spotify ;
-  « Écouter les extraits à la suite » enchaîne les extraits de tout l'album (depuis le titre sélectionné s'il y en a un)
+  « Écouter les extraits à la suite » enchaîne les extraits de tout l'album (depuis le titre sélectionné s'il y en a un) ;
+  sur téléphone, l'écran verrouillé affiche le morceau, la pochette et les boutons pause / suivant / précédent
 - **Onglets** (lien direct possible : `#comparer`, `#samples`, `#invites`, `#classement`, `#defi`, `#jeux/…`) :
   - **Comparer** : deux albums côte à côte, le meilleur chiffre de chaque ligne mis en valeur
   - **Samples** : les morceaux d'origine qu'il a samplés, à écouter côte à côte avec sa version
@@ -27,11 +30,12 @@ Site statique (HTML / CSS / JavaScript, sans framework) qui présente la discogr
   - **Mon classement** : tier list S → D des albums ou des morceaux de chaque album, export en image,
     partage par lien (l'ami voit ton classement au-dessus du sien) et « Mon top global » (tous tes sons en S et A)
   - **Défi du jour** : 5 morceaux, les mêmes pour tout le monde chaque jour ; série de jours et résultat à partager en emojis
-  - **Jeux** :
+  - **Jeux** (bouton « Partager mon score » en fin de partie : grille d'emojis + lien, comme le défi du jour) :
     - *Blind test* : retrouve le morceau ou l'album à partir d'un extrait de 2 à 20 s — 10 manches, contre la montre (60 s) ou en duel à deux sur le même écran (buzzers A et L)
     - *Pochette floue* : devine l'album d'après sa pochette pixelisée
     - *Devine l'année* : place un morceau sur la frise 2004 → aujourd'hui
     - *Plus ou moins* : quel morceau a le plus de streams Spotify ?
+    - *Qui est l'invité ?* : trouve l'artiste en featuring parmi 4 (2 pts sans écouter, 1 pt après l'extrait)
 - **Installable (PWA)** : « Installer l'application » dans le navigateur ; la discographie reste consultable hors ligne
 - **Aperçu de lien** : image et titre quand le lien est partagé (WhatsApp, Discord…)
 - **Streams mis à jour automatiquement** chaque lundi par GitHub Actions, avec historique pour les courbes (voir plus bas)
@@ -61,11 +65,14 @@ kanyewest/
 │   ├── player.js          ← mini-lecteur d'extraits (fiches, samples, devine l'année)
 │   ├── blindtest.js       ← blind test (solo, chrono, duel) + défi du jour
 │   ├── jeux.js            ← pochette floue + devine l'année
+│   ├── quiz-invites.js    ← jeu « Qui est l'invité ? »
+│   ├── share.js           ← partage des scores des jeux
 │   ├── game.js            ← jeu « Plus ou moins »
 │   ├── comparer.js        ← comparateur d'albums
 │   ├── invites.js         ← graphe des invités
 │   ├── samples.js         ← page Samples
 │   ├── tierlist.js        ← Mon classement (albums, morceaux, partage, top global)
+│   ├── quicksearch.js     ← recherche rapide (/ ou Ctrl + K)
 │   ├── theme.js           ← mode clair / sombre
 │   └── tabs.js            ← navigation entre les onglets
 ├── img/                   ← tes pochettes perso (optionnel)
@@ -79,8 +86,9 @@ kanyewest/
 │   └── samples.js         ← liste des samples
 ├── scripts/update_streams.py           ← mise à jour des streams depuis kworb.net
 ├── scripts/check_data.js              ← vérification des données (node scripts/check_data.js)
+├── scripts/smoke_test.js              ← test du site dans un navigateur (Playwright)
 ├── .github/workflows/update-streams.yml ← lance le script chaque lundi
-└── .github/workflows/check-data.yml     ← vérifie les données à chaque push
+└── .github/workflows/check-data.yml     ← vérifie les données et teste le site à chaque push
 ```
 
 Pour ajouter un album : un objet dans `data/albums.js` et sa tracklist dans `data/tracklists.js` (même `id`).
@@ -121,6 +129,12 @@ fichiers du site bien listés dans `sw.js`… GitHub Actions le lance à chaque 
 *Vérification des données*, une croix rouge = une erreur à corriger, le détail est dans le journal) et après
 la mise à jour des streams du lundi (si le contrôle échoue, rien n'est commité).
 Les avertissements (`!`) signalent un détail à vérifier sans bloquer.
+
+Le même workflow (*Vérifications*) teste aussi le site dans un vrai navigateur : `scripts/smoke_test.js` l'ouvre
+dans Chromium et passe sur tous les onglets, les jeux, les fiches album, les liens directs et la recherche rapide,
+sur ordinateur et sur mobile. Il échoue à la moindre erreur JavaScript, si un élément attendu manque ou si la page
+déborde sur le côté. Les pochettes et extraits d'Apple sont coupés pendant le test (résultat identique à chaque fois).
+En local : `npm install --no-save playwright && npx playwright install chromium`, puis `node scripts/smoke_test.js`.
 
 ## Aperçu de lien
 

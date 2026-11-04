@@ -818,6 +818,13 @@ function renderTracklist(a) {
   </div>`;
 }
 
+// Infos affichées sur l'écran verrouillé du téléphone pendant un extrait (js/player.js)
+function trackMeta(a, titre, pos = "") {
+  const x = allTracks(a.id).find((t) => t.titre === titre);
+  const artist = (a.avec ? `Kanye West & ${a.avec}` : "Kanye West") + (x?.feats.length ? ` feat. ${x.feats.join(", ")}` : "");
+  return { title: titre, artist, album: a.titre + (pos ? ` · extrait ${pos}` : ""), artwork: covers[a.id]?.img };
+}
+
 // ---------- Écoute de l'album à la suite (extraits de 30 s) ----------
 let queue = null; // { i: index du morceau, token } ; token : ignore les rappels d'un extrait déjà remplacé
 const queueButtons = () => [...document.querySelectorAll("#tracklist-wrap .tr-play")];
@@ -836,6 +843,12 @@ function playQueueAt(i) {
   syncQueue();
   b.closest("li").scrollIntoView({ block: "nearest", behavior: "smooth" });
   MiniPlayer.toggle(b, () => Previews.ye({ titre: b.dataset.titre, albumId: a.id }), {
+    meta: trackMeta(a, b.dataset.titre, `${i + 1}/${btns.length}`),
+    // Boutons suivant / précédent de l'écran verrouillé
+    actions: {
+      nexttrack: () => queue && playQueueAt(queue.i + 1),
+      previoustrack: () => queue && playQueueAt(Math.max(0, queue.i - 1)),
+    },
     onEnd: (reason) => {
       if (!queue || queue.token !== token) return;
       if (reason === "stopped") {
@@ -1029,7 +1042,7 @@ function bindEvents() {
     // Pendant l'écoute à la suite, un autre numéro = on continue à partir de ce morceau
     const k = queueButtons().indexOf(b);
     if (queue && k !== queue.i) return playQueueAt(k);
-    MiniPlayer.toggle(b, () => Previews.ye({ titre: b.dataset.titre, albumId: a.id }));
+    MiniPlayer.toggle(b, () => Previews.ye({ titre: b.dataset.titre, albumId: a.id }), { meta: trackMeta(a, b.dataset.titre) });
   });
 
   // Écouter à la suite : depuis le morceau sélectionné s'il y en a un, sinon depuis le début
@@ -1046,7 +1059,7 @@ function bindEvents() {
   document.addEventListener("keydown", (e) => {
     const row = e.target.closest?.("#stats-table tr[data-id], #singles li[data-id], #sp-songs li[data-id]");
     if (row && e.key === "Enter") return openAlbum(row.dataset.id);
-    if (!$("#modal").open) return;
+    if (!$("#modal").open || e.target.closest?.("input, select, textarea")) return;
     if (e.key === "ArrowLeft") step(-1);
     if (e.key === "ArrowRight") step(1);
   });
