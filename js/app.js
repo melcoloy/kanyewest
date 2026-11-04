@@ -753,6 +753,13 @@ function renderTracklist(a) {
   const st = t.map((x) => trackStreams(a.id, x.titre));
   const maxSt = Math.max(0, ...st.filter(Boolean));
   const hasSt = maxSt > 0;
+  // Streams gagnés depuis le relevé précédent (data/track-streams-prev.js)
+  const gain = t.map((x, i) => {
+    const before = TS_PREV[a.id]?.[x.titre];
+    return st[i] && before && st[i] > before ? st[i] - before : 0;
+  });
+  const maxGain = Math.max(0, ...gain);
+  const prevDate = window.TRACK_STREAMS_PREV_DATE;
 
   return `<div id="tracklist-wrap">
     <h3>Tracklist <span class="h3-meta">${t.length} titres${total}${nbFeats ? ` · ${nbFeats} invités` : ""}${a.id === "donda-2" ? "" : " · clique sur un numéro pour écouter un extrait"}</span></h3>
@@ -782,7 +789,11 @@ function renderTracklist(a) {
           }${
             hasSt && st[i]
               ? `<span class="tr-streams"><span class="tr-strack"><span class="tr-sbar" style="width:${(st[i] / maxSt) * 100}%"></span></span>${fmtStreams(st[i])}${
+                  gain[i] ? ` <span class="tr-gain" title="Streams gagnés depuis le ${fmtShort(prevDate)}">+${fmtDelta(gain[i])}</span>` : ""
+                }${
                   st[i] === maxSt ? ' <span class="tag top">le plus écouté</span>' : ""
+                }${
+                  gain[i] && gain[i] === maxGain && t.filter((_, k) => gain[k]).length > 1 ? ' <span class="tag hot">plus forte hausse</span>' : ""
                 }</span>`
               : ""
           }</span>
@@ -791,7 +802,9 @@ function renderTracklist(a) {
         )
         .join("")}
     </ol>
-    ${hasSt ? `<p class="tr-note">Streams Spotify${ed ? " de l'édition standard" : ""} au ${fmtDate((window.STATS?.spotify?.date) || "2026-10-24")} (kworb.net).</p>` : ""}
+    ${hasSt ? `<p class="tr-note">Streams Spotify${ed ? " de l'édition standard" : ""} au ${fmtDate((window.STATS?.spotify?.date) || "2026-10-24")} (kworb.net)${
+      maxGain ? ` ; en vert, les streams gagnés depuis le relevé du ${fmtDate(prevDate)}` : ""
+    }.</p>` : ""}
     ${note ? `<p class="tr-note">ⓘ ${escapeHtml(note)}</p>` : ""}
   </div>`;
 }
